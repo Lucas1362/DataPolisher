@@ -47,7 +47,7 @@ class DataCleanerApp:
         self.save_csv_button = tk.Button(root, text="Salvar Arquivo Limpo como CSV", command=self.save_file)
         self.save_csv_button.pack(pady=10)
 
-        self.save_excel_button = tk.Button(root, text="Salvar Arquivo Limpo como Excel", command=self.save_excel)
+        self.save_excel_button = tk.Button(root, text="Exportar para Excel", command=self.export_to_excel)
         self.save_excel_button.pack(pady=10)
 
     def load_file(self):
@@ -149,6 +149,31 @@ class DataCleanerApp:
                     messagebox.showerror("Erro", "Índice inválido.")
             except ValueError:
                 messagebox.showerror("Erro", "Por favor, insira um número válido.")
+        else:
+            messagebox.showwarning("Aviso", "Nenhum arquivo carregado.")
+
+    def export_to_excel(self):
+        if self.data is not None:
+            # Pergunta ao usuário quais colunas ele deseja exportar
+            columns = simpledialog.askstring(
+                "Exportar para Excel",
+                "Digite as colunas a serem exportadas (separadas por vírgula, por exemplo: Nome, Idade):"
+            )
+            
+            if columns:
+                columns = [col.strip() for col in columns.split(',')]
+                # Filtra as colunas disponíveis
+                available_columns = [col for col in columns if col in self.data.columns]
+                
+                if available_columns:
+                    # Cria um objeto ExcelWriter
+                    with pd.ExcelWriter('exported_data.xlsx') as writer:
+                        for col in available_columns:
+                            # Cria uma planilha para cada coluna filtrada
+                            self.data[[col]].to_excel(writer, sheet_name=col, index=False)
+                    messagebox.showinfo("Sucesso", "Dados exportados para Excel com sucesso!")
+                else:
+                    messagebox.showerror("Erro", "Nenhuma coluna válida selecionada.")
         else:
             messagebox.showwarning("Aviso", "Nenhum arquivo carregado.")
 
