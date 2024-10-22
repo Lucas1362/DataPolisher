@@ -98,19 +98,43 @@ class DataCleanerApp:
         if self.data is not None:
             column = simpledialog.askstring("Filtrar Coluna", "Digite o nome da coluna:")
             if column in self.data.columns:
-                unique_values = self.data[column].unique()  # Obtém valores únicos da coluna
-                value = simpledialog.askstring("Filtrar Coluna", f"Escolha um valor para filtrar:\n{unique_values.tolist()}")
-                if value in unique_values:
-                    filtered_data = self.data[self.data[column] == value]
-                    messagebox.showinfo("Sucesso", f"Filtrados {len(filtered_data)} registros.")
-                    self.data = filtered_data[[column]]  # Mantém apenas a coluna filtrada
-                    self.display_data()  # Atualiza a tabela para mostrar a coluna filtrada
-                else:
-                    messagebox.showerror("Erro", "Valor não encontrado na coluna.")
+                # Filtra os dados para mostrar apenas a coluna escolhida
+                filtered_data = self.data[[column]]
+                self.open_filtered_window(filtered_data, column)  # Abre nova janela com os dados filtrados
             else:
                 messagebox.showerror("Erro", "Coluna não encontrada.")
         else:
             messagebox.showwarning("Aviso", "Nenhum arquivo carregado.")
+
+    def open_filtered_window(self, filtered_data, column):
+        # Nova janela para exibir os dados filtrados
+        filtered_window = tk.Toplevel(self.root)
+        filtered_window.title(f"Dados Filtrados - Coluna: {column}")
+
+        # Tabela para exibir os dados filtrados
+        filtered_tree = ttk.Treeview(filtered_window)
+        filtered_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Barras de rolagem
+        filtered_scrollbar_y = ttk.Scrollbar(filtered_window, orient="vertical", command=filtered_tree.yview)
+        filtered_scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
+
+        filtered_scrollbar_x = ttk.Scrollbar(filtered_window, orient="horizontal", command=filtered_tree.xview)
+        filtered_scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
+
+        # Configura a tabela para usar as barras de rolagem
+        filtered_tree.configure(yscrollcommand=filtered_scrollbar_y.set, xscrollcommand=filtered_scrollbar_x.set)
+
+        # Configura as colunas da tabela
+        filtered_tree["columns"] = list(filtered_data.columns)
+        filtered_tree["show"] = "headings"
+
+        for col in filtered_tree["columns"]:
+            filtered_tree.heading(col, text=col)  # Define o cabeçalho
+
+        # Adiciona os dados à tabela filtrada
+        for _, row in filtered_data.iterrows():
+            filtered_tree.insert("", "end", values=list(row))
 
     def filter_row(self):
         if self.data is not None:
