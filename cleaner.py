@@ -1,6 +1,7 @@
 import pandas as pd
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from scipy import stats  # Para a detecção de outliers
 
 class DataCleanerApp:
     def __init__(self, root):
@@ -19,6 +20,10 @@ class DataCleanerApp:
         # Botão para preencher valores ausentes
         self.fill_na_button = tk.Button(root, text="Preencher Valores Ausentes", command=self.fill_na)
         self.fill_na_button.pack(pady=10)
+
+        # Botão para remover outliers
+        self.remove_outliers_button = tk.Button(root, text="Remover Outliers", command=self.remove_outliers)
+        self.remove_outliers_button.pack(pady=10)
 
         # Botão para salvar o arquivo CSV
         self.save_csv_button = tk.Button(root, text="Salvar Arquivo Limpo como CSV", command=self.save_file)
@@ -51,6 +56,25 @@ class DataCleanerApp:
         if self.data is not None:
             self.data.fillna('Não disponível', inplace=True)
             messagebox.showinfo("Sucesso", "Valores ausentes preenchidos!")
+        else:
+            messagebox.showwarning("Aviso", "Nenhum arquivo carregado.")
+
+    # Nova função para remover outliers usando Z-Score
+    def remove_outliers(self):
+        if self.data is not None:
+            try:
+                numeric_columns = self.data.select_dtypes(include='number').columns  # Seleciona apenas colunas numéricas
+                before_count = len(self.data)
+
+                # Remove outliers de todas as colunas numéricas com base no Z-Score
+                for column in numeric_columns:
+                    z_scores = stats.zscore(self.data[column])
+                    self.data = self.data[(abs(z_scores) < 3)]  # Limite de 3 desvios-padrão
+
+                after_count = len(self.data)
+                messagebox.showinfo("Sucesso", f"Outliers removidos! {before_count - after_count} linhas removidas.")
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao remover outliers: {e}")
         else:
             messagebox.showwarning("Aviso", "Nenhum arquivo carregado.")
 
