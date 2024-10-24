@@ -6,6 +6,8 @@ import pandas as pd
 
 class DataCleanerApp:
     def __init__(self, root):
+        
+        
         self.root = root
         self.root.title("Data Cleaner")
         self.data = None  # Inicializa o DataFrame como None
@@ -69,6 +71,11 @@ class DataCleanerApp:
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao carregar o arquivo: {e}")
 
+    def load_csv(self, file_path):
+        self.data = pd.read_csv(file_path)
+        self.data.fillna("Não disponível", inplace=True)  # Preenche NaN ao carregar
+
+
     # Método para mostrar os dados na Treeview
     def show_data(self):
         for i in self.tree.get_children():
@@ -102,11 +109,13 @@ class DataCleanerApp:
 
     # Método para preencher valores ausentes
     def fill_na(self):
+        
         if self.data is not None:
             if self.data.isnull().values.any():
                 for column in self.data.columns:
                     if self.data[column].dtype in [int, float]:  # Preencher apenas colunas numéricas
                         self.data[column].fillna(self.data[column].mean(), inplace=True)
+                        
                 self.show_data()
                 self.show_popup("Valores ausentes foram preenchidos com a média das colunas numéricas.")
             else:
@@ -117,57 +126,92 @@ class DataCleanerApp:
     # Método para filtrar dados por coluna
     # Método para filtrar dados por coluna
     def filter_column(self):
-        if self.data is not None:
-            column_name = simpledialog.askstring("Filtrar por coluna", "Digite o nome da coluna:")
-            if column_name and column_name in self.data.columns:
-                column_data = self.data[column_name]
-                column_values = "\n".join([f"{i + 1}: {value}" for i, value in enumerate(column_data)])  # Numera os valores
-                # Cria um pop-up com um Text widget para justificação
-                popup = Toplevel(self.root)
-                popup.title("Resultados")
-                popup.geometry("400x300")
-                popup.resizable(True, True)  # Permite redimensionar a janela
+        column_name = simpledialog.askstring("Filtrar por Coluna", "Digite o nome da coluna:")
+        
+        # Verifica se a coluna existe
+        if column_name is not None and column_name in self.data.columns:
+            column_data = self.data[column_name]  # Pega os dados da coluna
+            
+            # Cria uma nova janela para exibir os dados
+            result_window = tk.Toplevel(self.root)
+            result_window.title("Resultado do Filtro por Coluna")
+            
+            # Adiciona um frame para melhor organização
+            frame = tk.Frame(result_window)
+            frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-                text_widget = tk.Text(popup, wrap=tk.WORD)
-                text_widget.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
-                text_widget.insert(tk.END, f"Valores da coluna '{column_name}':\n{column_values}")
-                text_widget.config(state=tk.DISABLED)  # Torna o Text widget somente leitura
+            # Cria um rótulo com o nome da coluna
+            label = tk.Label(frame, text=f"Coluna: {column_name}", font=("Arial", 14, "bold"))
+            label.pack(anchor="w")
 
-                ok_button = tk.Button(popup, text="OK", command=popup.destroy)
-                ok_button.pack(pady=10)
-            else:
-                messagebox.showwarning("Aviso", "Coluna inválida.")
+            # Cria um PanedWindow para permitir o redimensionamento
+            paned_window = tk.PanedWindow(frame, orient=tk.VERTICAL)
+            paned_window.pack(fill=tk.BOTH, expand=True)
+
+            # Cria a Text box
+            text_box = tk.Text(paned_window, wrap=tk.WORD)
+            paned_window.add(text_box)
+
+            # Adiciona os dados formatados ao Text, substituindo "nan" por "Dados não disponíveis"
+            for index, value in enumerate(column_data):
+                if pd.isna(value):  # Verifica se o valor é NaN
+                    value = "Dados não disponíveis"  # Mensagem personalizada
+                text_box.insert(tk.END, f"Linha {index + 1}: {value}\n")
+
+            # Desabilita a edição do Text
+            text_box.config(state=tk.DISABLED)
+
+            # Botão para fechar a janela
+            close_button = tk.Button(frame, text="Fechar", command=result_window.destroy)
+            close_button.pack(pady=5)
         else:
-            messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
+            messagebox.showwarning("Atenção", "Nome da coluna inválido!")
 
     # Método para filtrar dados por linha
     def filter_row(self):
-        if self.data is not None:
-            try:
-                row_number = simpledialog.askinteger("Filtrar por linha", "Digite o número da linha (1 a n):")
-                if row_number is not None and 1 <= row_number <= len(self.data):
-                    row_data = self.data.iloc[row_number - 1]  # Obtém todos os dados da linha
-                    row_message = "\n".join([f"{col}: {row_data[col]}" for col in self.data.columns])  # Formatação
-                    
-                    # Cria um pop-up com um Text widget para justificação
-                    popup = Toplevel(self.root)
-                    popup.title("Resultado")
-                    popup.geometry("400x300")
-                    popup.resizable(True, True)  # Permite redimensionar a janela
+        row_number = simpledialog.askinteger("Filtrar por linha", "Digite o número da linha:")
+        
+        # Verifica se a linha existe
+        if row_number is not None and 1 <= row_number <= len(self.data):
+            row_data = self.data.iloc[row_number - 1]  # Pega a linha desejada
+            
+            # Cria uma nova janela para exibir os dados
+            result_window = tk.Toplevel(self.root)
+            result_window.title("Resultado do Filtro por Linha")
+            
+            # Adiciona um frame para melhor organização
+            frame = tk.Frame(result_window)
+            frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+            
+            # Cria um rótulo com o número da linha
+            label = tk.Label(frame, text=f"Linha {row_number}:", font=("Arial", 14, "bold"))
+            label.pack(anchor="w")
 
-                    text_widget = tk.Text(popup, wrap=tk.WORD)
-                    text_widget.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
-                    text_widget.insert(tk.END, f"Linha {row_number}:\n{row_message}")
-                    text_widget.config(state=tk.DISABLED)  # Torna o Text widget somente leitura
+            # Cria um PanedWindow para permitir o redimensionamento
+            paned_window = tk.PanedWindow(frame, orient=tk.VERTICAL)
+            paned_window.pack(fill=tk.BOTH, expand=True)
 
-                    ok_button = tk.Button(popup, text="OK", command=popup.destroy)
-                    ok_button.pack(pady=10)
-                else:
-                    messagebox.showwarning("Aviso", "Número da linha inválido.")
-            except Exception as e:
-                messagebox.showerror("Erro", f"Erro ao filtrar: {e}")
+            # Cria a Text box
+            text_box = tk.Text(paned_window, wrap=tk.WORD)
+            paned_window.add(text_box)
+
+            # Adiciona os dados formatados ao Text, substituindo "nan" por "Dados não disponíveis"
+            for column, value in row_data.items():
+                if pd.isna(value):  # Verifica se o valor é NaN
+                    value = "Dados não disponíveis"  # Mensagem personalizada
+                text_box.insert(tk.END, f"{column}: {value}\n")
+
+            # Desabilita a edição do Text
+            text_box.config(state=tk.DISABLED)
+
+            # Botão para fechar a janela
+            close_button = tk.Button(frame, text="Fechar", command=result_window.destroy)
+            close_button.pack(pady=5)
         else:
-            messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
+            messagebox.showwarning("Atenção", "Número da linha inválido!")
+
+
+
 
     # Método para mostrar os dados na janela pop-up
     def show_popup(self, message):
