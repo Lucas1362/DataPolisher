@@ -1,13 +1,8 @@
 # main.py
 import tkinter as tk
-
-from cleaner import DataCleanerApp  # Funcionalidades
-
+from interface import DataCleanerApp
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    
-    cleaner_app = DataCleanerApp(root)  # Instancia o DataCleanerApp com funcionalidades
-    # Passa o DataCleanerApp para a interface
-    
-    root.mainloop()
+    root = tk.Tk()  # Cria a janela principal
+    app = DataCleanerApp(root)  # Inicializa a aplicação
+    root.mainloop()  # Inicia o loop da interface gráfica
