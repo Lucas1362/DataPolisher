@@ -115,17 +115,31 @@ class DataCleanerApp:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
 
     # Método para filtrar dados por coluna
+    # Método para filtrar dados por coluna
     def filter_column(self):
         if self.data is not None:
-            column = simpledialog.askstring("Filtrar por coluna", "Digite o nome da coluna:")
-            if column in self.data.columns:
-                column_data = self.data[column].tolist()  # Obtém todos os dados da coluna
-                self.show_popup(f"{column}:\n" + "\n".join(map(str, column_data)))
+            column_name = simpledialog.askstring("Filtrar por coluna", "Digite o nome da coluna:")
+            if column_name and column_name in self.data.columns:
+                column_data = self.data[column_name]
+                column_values = "\n".join([f"{i + 1}: {value}" for i, value in enumerate(column_data)])  # Numera os valores
+                # Cria um pop-up com um Text widget para justificação
+                popup = Toplevel(self.root)
+                popup.title("Resultados")
+                popup.geometry("400x300")
+                popup.resizable(True, True)  # Permite redimensionar a janela
+
+                text_widget = tk.Text(popup, wrap=tk.WORD)
+                text_widget.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+                text_widget.insert(tk.END, f"Valores da coluna '{column_name}':\n{column_values}")
+                text_widget.config(state=tk.DISABLED)  # Torna o Text widget somente leitura
+
+                ok_button = tk.Button(popup, text="OK", command=popup.destroy)
+                ok_button.pack(pady=10)
             else:
-                messagebox.showwarning("Aviso", "Coluna não encontrada.")
+                messagebox.showwarning("Aviso", "Coluna inválida.")
         else:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
-    # Método para filtrar dados por linha
+
     # Método para filtrar dados por linha
     def filter_row(self):
         if self.data is not None:
