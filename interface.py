@@ -1,7 +1,7 @@
 # interface.py
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, Toplevel
-from estilo import aplicar_estilo_botao, aplicar_estilo_entry, aplicar_estilo_label
+from estilo import aplicar_estilo
 from tkinter import ttk
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,8 +9,10 @@ import matplotlib.pyplot as plt
 class DataCleanerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Data Cleaner")
-        self.data = None  # Inicializa o DataFrame como None
+        self.root.title("Data Cleaner")  # Define o título da janela
+        self.root.iconbitmap("D:\\vscode\\DataPolisher\\i.asidj\\iconeData1.ico")  # Adiciona o ícone à janela
+        self.data = None
+        self.is_dark_mode = False  # Inicializa o modo escuro como False
 
         # Frame para a tabela
         self.frame = tk.Frame(root)
@@ -30,28 +32,48 @@ class DataCleanerApp:
         # Configura a tabela para usar as barras de rolagem
         self.tree.configure(yscrollcommand=self.scrollbar_y.set, xscrollcommand=self.scrollbar_x.set)
 
+        # Frame para os botões
+        self.button_frame = tk.Frame(root)
+        self.button_frame.pack(pady=10, fill=tk.X)
+
         # Botões da interface
-        self.load_button = tk.Button(root, text="Carregar Arquivo CSV", command=self.load_file)
-        self.load_button.pack(pady=10)
+        self.load_button = tk.Button(self.button_frame, text="Carregar Arquivo CSV", command=self.load_file)
+        self.load_button.grid(row=0, column=0, padx=5, pady=5, sticky='ew')
 
-        self.remove_duplicates_button = tk.Button(root, text="Remover Duplicatas", command=self.remove_duplicates)
-        self.remove_duplicates_button.pack(pady=10)
+        self.remove_duplicates_button = tk.Button(self.button_frame, text="Remover Duplicatas", command=self.remove_duplicates)
+        self.remove_duplicates_button.grid(row=1, column=0, padx=5, pady=5, sticky='ew')
 
-        self.fill_na_button = tk.Button(root, text="Preencher Valores Ausentes", command=self.fill_na)
-        self.fill_na_button.pack(pady=10)
+        self.fill_na_button = tk.Button(self.button_frame, text="Preencher Valores Ausentes", command=self.fill_na)
+        self.fill_na_button.grid(row=2, column=0, padx=5, pady=5, sticky='ew')
 
-        self.filter_column_button = tk.Button(root, text="Filtrar Dados por Coluna", command=self.filter_column)
-        self.filter_column_button.pack(pady=10)
+        self.filter_column_button = tk.Button(self.button_frame, text="Filtrar Dados por Coluna", command=self.filter_column)
+        self.filter_column_button.grid(row=3, column=0, padx=5, pady=5, sticky='ew')
 
-        self.filter_row_button = tk.Button(root, text="Filtrar Dados por Linha", command=self.filter_row)
-        self.filter_row_button.pack(pady=10)
+        self.filter_row_button = tk.Button(self.button_frame, text="Filtrar Dados por Linha", command=self.filter_row)
+        self.filter_row_button.grid(row=4, column=0, padx=5, pady=5, sticky='ew')
 
-        self.save_button = tk.Button(root, text="Salvar Arquivo Limpo", command=self.save_file)
-        self.save_button.pack(pady=10)
+        self.save_button = tk.Button(self.button_frame, text="Salvar Arquivo Limpo", command=self.save_file)
+        self.save_button.grid(row=5, column=0, padx=5, pady=5, sticky='ew')
+
+        # Botão para alternar entre modos
+        self.toggle_mode_button = tk.Button(self.button_frame, text="Alternar Modo", command=self.toggle_mode)
+        self.toggle_mode_button.grid(row=6, column=0, padx=5, pady=5, sticky='ew')
 
         # Configura a coluna e linha para expandir
         self.frame.grid_columnconfigure(0, weight=1)
         self.frame.grid_rowconfigure(0, weight=1)
+        self.button_frame.grid_columnconfigure(0, weight=1)  # Para os botões
+
+        self.aplicar_estilo()  # Aplica o estilo inicial
+
+    # Método para alternar entre modos
+    def toggle_mode(self):
+        self.is_dark_mode = not self.is_dark_mode  # Alterna o modo
+        self.aplicar_estilo()  # Aplica o novo estilo
+
+    def aplicar_estilo(self):
+        # Aplica o estilo completo
+        aplicar_estilo(self.root, self.is_dark_mode)
 
     # Método para carregar o arquivo CSV
     def load_file(self):
