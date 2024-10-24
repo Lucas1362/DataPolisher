@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 class DataCleanerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Data Cleaner")
+        self.root.title("Data Cleaner")  # Define o título da janela
+        self.root.iconbitmap("D:\\vscode\\DataPolisher\\i.asidj\\iconeData1.ico")  # Adiciona o ícone à janela
         self.data = None
         self.is_dark_mode = False  # Inicializa o modo escuro como False
 
@@ -73,6 +74,7 @@ class DataCleanerApp:
     def aplicar_estilo(self):
         # Aplica o estilo completo
         aplicar_estilo(self.root, self.is_dark_mode)
+
     # Método para carregar o arquivo CSV
     def load_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
