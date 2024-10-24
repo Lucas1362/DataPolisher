@@ -1,6 +1,7 @@
 # interface.py
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, Toplevel
+from estilo import aplicar_estilo_botao, aplicar_estilo_entry, aplicar_estilo_label
 from tkinter import ttk
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -95,27 +96,22 @@ class DataCleanerApp:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
 
     # Método para preencher valores ausentes
-# Método para preencher valores ausentes
     def fill_na(self):
         if self.data is not None:
             if self.data.isnull().values.any():
                 # Pergunta ao usuário qual texto usar para os valores ausentes
                 replacement_text = simpledialog.askstring("Substituir valores ausentes", 
-                                                        "Digite o texto para substituir os valores ausentes:")
+                                                        "Digite o texto para substituir todos os valores ausentes:")
 
-                for column in self.data.columns:
-                    if self.data[column].dtype in [int, float]:  # Preencher apenas colunas numéricas
-                        self.data[column].fillna(self.data[column].mean(), inplace=True)
-                    else:
-                        self.data[column].fillna(replacement_text, inplace=True)
+                # Preencher todos os valores ausentes em todo o DataFrame
+                self.data.fillna(replacement_text, inplace=True)
 
                 self.show_data()
-                self.show_popup("Valores ausentes foram preenchidos.")
+                self.show_popup("Todos os valores ausentes foram preenchidos.")
             else:
                 self.show_popup("Nenhum valor ausente encontrado no DataFrame.")
         else:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
-
 
     # Método para filtrar dados por coluna
     def filter_column(self):
@@ -187,9 +183,6 @@ class DataCleanerApp:
         ok_button.pack(pady=10)
 
     # Método para salvar o DataFrame em diferentes formatos
-
-
-# Método para salvar o DataFrame em diferentes formatos
     def save_file(self):
         if self.data is not None:
             file_path = filedialog.asksaveasfilename(defaultextension=".csv",
@@ -197,40 +190,32 @@ class DataCleanerApp:
                                                         ("CSV files", "*.csv"),
                                                         ("Excel files", "*.xlsx"),
                                                         ("JSON files", "*.json"),
-                                                        ("PDF files", "*.pdf")  # Adiciona a opção PDF
+                                                        ("PDF files", "*.pdf")
                                                     ])
             if file_path:
-                if file_path.endswith('.csv'):
-                    self.data.to_csv(file_path, index=False)
-                    messagebox.showinfo("Sucesso", f"Arquivo CSV salvo com sucesso em:\n{file_path}")
-                elif file_path.endswith('.xlsx'):
-                    self.data.to_excel(file_path, index=False)
-                    messagebox.showinfo("Sucesso", f"Arquivo Excel salvo com sucesso em:\n{file_path}")
-                elif file_path.endswith('.json'):
-                    self.data.to_json(file_path, orient='records', lines=True)
-                    messagebox.showinfo("Sucesso", f"Arquivo JSON salvo com sucesso em:\n{file_path}")
-                elif file_path.endswith('.pdf'):
-                    self.save_as_pdf(file_path)  # Chama o método para salvar como PDF
-                else:
-                    messagebox.showwarning("Aviso", "Formato de arquivo não suportado.")
+                self.save_data(file_path)
         else:
             messagebox.showwarning("Aviso", "Não há dados para salvar.")
 
-    # Método para exportar para PDF
-    def save_as_pdf(self, file_path):
-        # Criar uma nova figura
-        plt.figure(figsize=(12, 8))
-        
-        # Tabela a partir dos dados do DataFrame
-        plt.table(cellText=self.data.values, colLabels=self.data.columns, cellLoc='center', loc='center')
-        plt.axis('off')  # Ocultar eixos
-        
-        # Salvar a figura como PDF
-        plt.savefig(file_path, format='pdf')
-        plt.close()  # Fechar a figura para liberar memória
-        messagebox.showinfo("Sucesso", f"Arquivo PDF salvo com sucesso em:\n{file_path}")
+    # Método que centraliza a lógica de salvamento
+    def save_data(self, file_path):
+        if file_path.endswith('.csv'):
+            self.data.to_csv(file_path, index=False)
+            messagebox.showinfo("Sucesso", f"Arquivo CSV salvo com sucesso em:\n{file_path}")
+        elif file_path.endswith('.xlsx'):
+            self.data.to_excel(file_path, index=False)
+            messagebox.showinfo("Sucesso", f"Arquivo Excel salvo com sucesso em:\n{file_path}")
+        elif file_path.endswith('.json'):
+            self.data.to_json(file_path, orient='records', lines=True)
+            messagebox.showinfo("Sucesso", f"Arquivo JSON salvo com sucesso em:\n{file_path}")
+        elif file_path.endswith('.pdf'):
+            # Aqui você pode adicionar a lógica para salvar como PDF
+            # Usando uma biblioteca como matplotlib ou reportlab
+            messagebox.showinfo("Atenção", "PDFs ainda não implementados.")
+        else:
+            messagebox.showerror("Erro", "Formato de arquivo não suportado.")
 
-
+# Executar a aplicação
 if __name__ == "__main__":
     root = tk.Tk()
     app = DataCleanerApp(root)

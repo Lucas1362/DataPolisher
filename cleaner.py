@@ -1,5 +1,6 @@
 # cleaner.py
 import pandas as pd
+from estilo import aplicar_estilo_botao, aplicar_estilo_entry
 
 def remove_duplicates(data):
     """Remove duplicatas do DataFrame."""
