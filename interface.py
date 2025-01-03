@@ -60,14 +60,23 @@ class DataCleanerApp:
 
     # Método para carregar o arquivo CSV
     def load_file(self):
-        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv"), ("Word files", "*.docx")])
         if file_path:
             try:
-                self.data = pd.read_csv(file_path)
+                if file_path.endswith('.csv'):
+                    self.data = pd.read_csv(file_path)
+                elif file_path.endswith('.docx'):
+                    from docx import Document  # Importa aqui para evitar dependências desnecessárias
+                    doc = Document(file_path)
+                    # Extrai o texto do Word para uma lista de strings
+                    data = [p.text for p in doc.paragraphs if p.text.strip()]
+                    # Cria um DataFrame simples com uma única coluna
+                    self.data = pd.DataFrame(data, columns=["Texto"])
                 self.show_data()
                 messagebox.showinfo("Sucesso", "Arquivo carregado com sucesso!")
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao carregar o arquivo: {e}")
+
 
     # Método para mostrar os dados na Treeview
     def show_data(self):
