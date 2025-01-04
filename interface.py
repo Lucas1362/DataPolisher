@@ -4,7 +4,12 @@ from tkinter import filedialog, messagebox, simpledialog, Toplevel
 from estilo import aplicar_estilo
 from tkinter import ttk
 import pandas as pd
+<<<<<<< Updated upstream
 import matplotlib.pyplot as plt
+=======
+from docx import Document
+
+>>>>>>> Stashed changes
 
 class DataCleanerApp:
     def __init__(self, root):
@@ -80,12 +85,30 @@ class DataCleanerApp:
         file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
         if file_path:
             try:
+<<<<<<< Updated upstream
                 self.data = pd.read_csv(file_path)
+=======
+                if file_path.endswith('.csv'):
+                    self.data = pd.read_csv(file_path)
+                elif file_path.endswith('.docx'):
+                    from docx import Document
+                    doc = Document(file_path)
+                    data = [p.text.strip() for p in doc.paragraphs if p.text.strip()]  # Remove linhas vazias
+                    if data:
+                        self.data = pd.DataFrame(data, columns=["Texto"])
+                    else:
+                        raise ValueError("O arquivo Word não contém texto válido.")
+>>>>>>> Stashed changes
                 self.show_data()
                 messagebox.showinfo("Sucesso", "Arquivo carregado com sucesso!")
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao carregar o arquivo: {e}")
 
+<<<<<<< Updated upstream
+=======
+
+
+>>>>>>> Stashed changes
     # Método para mostrar os dados na Treeview
     def show_data(self):
         for i in self.tree.get_children():
