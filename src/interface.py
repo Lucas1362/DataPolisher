@@ -16,6 +16,7 @@ import pandas as pd
 import customtkinter as ctk
 
 class DataCleanerApp:
+
     """Aplicativo principal de limpeza e padronização de dados.
 
     Esta classe concentra a lógica de interface, os fluxos de interação e as
@@ -25,9 +26,11 @@ class DataCleanerApp:
     """
 
     def __init__(self, root):
+
         # Bloco principal da interface: inicialização do app e do estado geral.
         # Aqui ficam os dados ativos, o histórico do undo e as configurações
         # visuais que afetam toda a aplicação.
+       
         self.root = root
         self.root.title("DataPolisher - Limpeza de Dados")
         self.root.configure(fg_color="#edf4ff")
@@ -61,11 +64,14 @@ class DataCleanerApp:
         # --- ESTILO DA TABELA (modo claro/escuro dinâmico) ---
         self.style.theme_use("default")
         self._apply_theme_colors()
+
         # ----------------------------------------------------
 
         # --- FRAME DA TABELA ---
         # Área central de visualização dos dados. É aqui que a tabela fica
         # exposta ao usuário, com scroll vertical e interações de navegação.
+   
+   
         self.frame = ctk.CTkFrame(self.root, corner_radius=18, fg_color="#f9fbff", border_color="#dfeaff", border_width=1)
         self.frame.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
 
@@ -131,7 +137,9 @@ class DataCleanerApp:
         self.theme_switch = ctk.CTkSwitch(self.button_frame, text="Modo Claro", command=self.toggle_mode, width=120, height=28, border_color="#9bb1d1", fg_color="#d6e4ff")
         self.theme_switch.grid(row=0, column=4, padx=15, pady=10)
 
+
         # LINHA 1 (5 botões)
+   
         self.filter_column_button = ctk.CTkButton(self.button_frame, text="Filtrar Coluna", command=self.filter_column, width=140, fg_color="#8ab6ff", hover_color="#72a5ff", text_color="#0d1b2a", **common_button_opts)
         self.filter_column_button.grid(row=1, column=0, padx=6, pady=10)
 
