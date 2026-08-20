@@ -11,8 +11,12 @@ class DataCleanerApp:
     def __init__(self, root):
         self.root = root
         self.root.title("DataPolisher - Limpeza de Dados")
+        self.root.configure(fg_color="#edf4ff")
+        self.root.minsize(980, 700)
         self.data = None
         self.data_history = []
+        self.is_dark_mode = False
+        self.style = ttk.Style()
         
         # --- ÍCONE ---
         diretorio_atual = os.path.dirname(__file__) 
@@ -33,39 +37,13 @@ class DataCleanerApp:
         self.subtitle_label = ctk.CTkLabel(self.header_frame, text="Higienização inteligente de dados", font=ctk.CTkFont(size=14, slant="italic"), text_color="gray")
         self.subtitle_label.pack(side=tk.LEFT, padx=5, pady=(8,0))
 
-        # --- ESTILO DA TABELA (Deixando moderna e escura) ---
-        style = ttk.Style()
-        style.theme_use("default")
-        
-        # Cores do Modo Escuro
-        bg_color = "#2b2b2b"
-        fg_color = "white"
-        selected_color = "#1f538d" # Azul padrão do CustomTkinter
-        
-        style.configure("Treeview",
-                        background=bg_color,
-                        foreground=fg_color,
-                        rowheight=30, # Linhas mais gordinhas e confortáveis
-                        fieldbackground=bg_color,
-                        bordercolor="#343638",
-                        borderwidth=0)
-        
-        # Remove as bordas feias e pinta a linha selecionada
-        style.map('Treeview', background=[('selected', selected_color)])
-        
-        # Estilo do Cabeçalho da Tabela
-        style.configure("Treeview.Heading",
-                        background="#3b3b3b",
-                        foreground=fg_color,
-                        font=('Arial', 10, 'bold'),
-                        relief="flat",
-                        padding=5)
-        
-        style.map("Treeview.Heading", background=[('active', '#4b4b4b')])
+        # --- ESTILO DA TABELA (modo claro/escuro dinâmico) ---
+        self.style.theme_use("default")
+        self._apply_theme_colors()
         # ----------------------------------------------------
 
         # --- FRAME DA TABELA ---
-        self.frame = ctk.CTkFrame(self.root, corner_radius=10)
+        self.frame = ctk.CTkFrame(self.root, corner_radius=18, fg_color="#f9fbff", border_color="#dfeaff", border_width=1)
         self.frame.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
 
         self.tree = ttk.Treeview(self.frame)
@@ -74,55 +52,192 @@ class DataCleanerApp:
         self.scrollbar_y = ctk.CTkScrollbar(self.frame, orientation="vertical", command=self.tree.yview)
         self.scrollbar_y.grid(row=0, column=1, sticky='ns', pady=10)
 
-        self.scrollbar_x = ctk.CTkScrollbar(self.root, orientation="horizontal", command=self.tree.xview)
-        self.scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=(0, 15))
-        self.tree.configure(yscrollcommand=self.scrollbar_y.set, xscrollcommand=self.scrollbar_x.set)
+        self.tree.configure(yscrollcommand=self.scrollbar_y.set)
+        self._apply_theme_colors()
+
+        # Arraste horizontal da tabela (simula swipe de touch em desktop)
+        self._horizontal_drag_active = False
+        self._horizontal_drag_start_x = 0
+        self._horizontal_drag_start_scroll = 0.0
+        self._horizontal_drag_velocity = 0.0
+        self._horizontal_drag_last_x = 0
+        self._horizontal_drag_inertia_id = None
+        self.tree.bind("<Shift-ButtonPress-1>", self._start_horizontal_drag)
+        self.tree.bind("<Shift-B1-Motion>", self._move_horizontal_drag)
+        self.tree.bind("<Shift-ButtonRelease-1>", self._stop_horizontal_drag)
+        self.tree.bind("<ButtonPress-2>", self._start_horizontal_drag)
+        self.tree.bind("<B2-Motion>", self._move_horizontal_drag)
+        self.tree.bind("<ButtonRelease-2>", self._stop_horizontal_drag)
+        self.tree.bind("<ButtonPress-3>", self._start_horizontal_drag)
+        self.tree.bind("<B3-Motion>", self._move_horizontal_drag)
+        self.tree.bind("<ButtonRelease-3>", self._stop_horizontal_drag)
+        self.tree.bind("<MouseWheel>", self._on_mouse_wheel_horizontal)
+        self.tree.bind("<Shift-MouseWheel>", self._on_mouse_wheel_horizontal)
 
         # --- FRAME DOS BOTÕES ---
         self.button_frame = ctk.CTkFrame(self.root, fg_color="transparent")
         self.button_frame.pack(pady=10, padx=20, fill=tk.X)
 
         # --- BOTÕES MODERNOS ---
+        button_font = ctk.CTkFont(size=12, weight="bold")
+        common_button_opts = {
+            "corner_radius": 10,
+            "height": 38,
+            "font": button_font,
+            "border_width": 0,
+        }
+
         # LINHA 0 (4 botões)
-        self.load_button = ctk.CTkButton(self.button_frame, text="Carregar Arquivo", command=self.load_file, width=160)
+        self.load_button = ctk.CTkButton(self.button_frame, text="Carregar Arquivo", command=self.load_file, width=160, fg_color="#7aa7ff", hover_color="#5c8ef5", text_color="#0d1b2a", **common_button_opts)
         self.load_button.grid(row=0, column=0, padx=8, pady=10)
 
-        self.remove_duplicates_button = ctk.CTkButton(self.button_frame, text="Remover Duplicatas", command=self.remove_duplicates, width=160)
+        self.remove_duplicates_button = ctk.CTkButton(self.button_frame, text="Remover Duplicatas", command=self.remove_duplicates, width=160, fg_color="#b99cff", hover_color="#a889ff", text_color="#1f1638", **common_button_opts)
         self.remove_duplicates_button.grid(row=0, column=1, padx=8, pady=10)
 
-        self.fill_na_button = ctk.CTkButton(self.button_frame, text="Preencher Nulos", command=self.fill_na, width=160)
+        self.fill_na_button = ctk.CTkButton(self.button_frame, text="Preencher Nulos", command=self.fill_na, width=160, fg_color="#7ad7d0", hover_color="#62c8c0", text_color="#0d2c2c", **common_button_opts)
         self.fill_na_button.grid(row=0, column=2, padx=8, pady=10)
 
-        self.theme_switch = ctk.CTkSwitch(self.button_frame, text="Modo Claro", command=self.toggle_mode)
-        self.theme_switch.grid(row=0, column=3, padx=15, pady=10)
+        self.standardize_button = ctk.CTkButton(self.button_frame, text="Padronizar Dados", command=self.standardize_data, width=180, fg_color="#f4c27d", hover_color="#efb463", text_color="#382612", **common_button_opts)
+        self.standardize_button.grid(row=0, column=3, padx=8, pady=10)
+
+        self.theme_switch = ctk.CTkSwitch(self.button_frame, text="Modo Claro", command=self.toggle_mode, width=120, height=28, border_color="#9bb1d1", fg_color="#d6e4ff")
+        self.theme_switch.grid(row=0, column=4, padx=15, pady=10)
 
         # LINHA 1 (5 botões)
-        self.filter_column_button = ctk.CTkButton(self.button_frame, text="Filtrar Coluna", command=self.filter_column, width=140)
+        self.filter_column_button = ctk.CTkButton(self.button_frame, text="Filtrar Coluna", command=self.filter_column, width=140, fg_color="#8ab6ff", hover_color="#72a5ff", text_color="#0d1b2a", **common_button_opts)
         self.filter_column_button.grid(row=1, column=0, padx=6, pady=10)
 
-        self.filter_row_button = ctk.CTkButton(self.button_frame, text="Filtrar Linha", command=self.filter_row, width=140)
+        self.filter_row_button = ctk.CTkButton(self.button_frame, text="Filtrar Linha", command=self.filter_row, width=140, fg_color="#8ab6ff", hover_color="#72a5ff", text_color="#0d1b2a", **common_button_opts)
         self.filter_row_button.grid(row=1, column=1, padx=6, pady=10)
 
-        self.delete_column_button = ctk.CTkButton(self.button_frame, text="Excluir Coluna", command=self.delete_column, width=140, fg_color="#d9534f", hover_color="#c9302c")
-        self.delete_column_button.grid(row=1, column=2, padx=6, pady=10)
+        self.undo_button = ctk.CTkButton(self.button_frame, text="Desfazer", command=self.undo_action, width=140, fg_color="#8ab6ff", hover_color="#72a5ff", text_color="#0d1b2a", **common_button_opts)
+        self.undo_button.grid(row=1, column=2, padx=6, pady=10)
 
-        self.undo_button = ctk.CTkButton(self.button_frame, text="Desfazer", command=self.undo_action, width=140, fg_color="#f0ad4e", hover_color="#ec971f")
-        self.undo_button.grid(row=1, column=3, padx=6, pady=10)
+        self.save_button = ctk.CTkButton(self.button_frame, text="Salvar", command=self.save_file, width=140, fg_color="#7bd6a1", hover_color="#63c78f", text_color="#103022", **common_button_opts)
+        self.save_button.grid(row=1, column=3, padx=6, pady=10)
 
-        self.save_button = ctk.CTkButton(self.button_frame, text="Salvar", command=self.save_file, width=140, fg_color="#5cb85c", hover_color="#4cae4c")
-        self.save_button.grid(row=1, column=4, padx=6, pady=10)
+        self.delete_column_button = ctk.CTkButton(self.button_frame, text="Excluir Coluna", command=self.delete_column, width=140, fg_color="#f3a6a6", hover_color="#ee8f8f", text_color="#3c1d1d", **common_button_opts)
+        self.delete_column_button.grid(row=1, column=4, padx=6, pady=10)
 
         # Ajuste de expansão
         self.frame.grid_columnconfigure(0, weight=1)
         self.frame.grid_rowconfigure(0, weight=1)
         self.button_frame.grid_columnconfigure((0, 1, 2, 3, 4), weight=1)
+    def _get_theme_colors(self):
+        if self.is_dark_mode:
+            return {
+                "bg": "#111827",
+                "panel": "#1d2433",
+                "table_bg": "#202a3a",
+                "heading": "#2c374d",
+                "heading_active": "#3a4968",
+                "text": "#edf2ff",
+                "selected": "#7aa7ff",
+                "border": "#394c72",
+            }
+        return {
+            "bg": "#edf4ff",
+            "panel": "#f8fbff",
+            "table_bg": "#ffffff",
+            "heading": "#e2ebff",
+            "heading_active": "#d4e1ff",
+            "text": "#1b263b",
+            "selected": "#b8d1ff",
+            "border": "#dfeaff",
+        }
+
+    def _apply_theme_colors(self):
+        colors = self._get_theme_colors()
+        self.root.configure(fg_color=colors["bg"])
+        if hasattr(self, "frame"):
+            self.frame.configure(fg_color=colors["panel"])
+        if hasattr(self, "tree"):
+            self.style.configure("Treeview",
+                                background=colors["table_bg"],
+                                foreground=colors["text"],
+                                rowheight=30,
+                                fieldbackground=colors["table_bg"],
+                                bordercolor=colors["border"],
+                                borderwidth=0)
+            self.style.map("Treeview", background=[("selected", colors["selected"])])
+            self.style.configure("Treeview.Heading",
+                                background=colors["heading"],
+                                foreground=colors["text"],
+                                font=("Arial", 10, "bold"),
+                                relief="flat",
+                                padding=5)
+            self.style.map("Treeview.Heading", background=[("active", colors["heading_active"])])
+
+    def _start_horizontal_drag(self, event):
+        self._horizontal_drag_active = True
+        self._horizontal_drag_start_x = event.x
+        self._horizontal_drag_start_scroll = float(self.tree.xview()[0])
+        self._horizontal_drag_last_x = event.x
+        self._horizontal_drag_velocity = 0.0
+        if self._horizontal_drag_inertia_id is not None:
+            self.root.after_cancel(self._horizontal_drag_inertia_id)
+            self._horizontal_drag_inertia_id = None
+
+    def _move_horizontal_drag(self, event):
+        if not self._horizontal_drag_active:
+            return
+
+        delta_x = event.x - self._horizontal_drag_last_x
+        self._horizontal_drag_last_x = event.x
+
+        # Move com sensibilidade reduzida para parecer mais natural
+        current_scroll = float(self.tree.xview()[0])
+        target_scroll = current_scroll - (delta_x / max(self.tree.winfo_width(), 1)) * 1.4
+        target_scroll = max(0.0, min(target_scroll, 1.0))
+        self.tree.xview_moveto(target_scroll)
+
+        # Inércia baseada no último deslocamento do drag
+        self._horizontal_drag_velocity = (target_scroll - current_scroll) * 1.8
+
+    def _stop_horizontal_drag(self, event):
+        self._horizontal_drag_active = False
+        self._horizontal_drag_velocity *= 0.7
+        if abs(self._horizontal_drag_velocity) < 0.0005:
+            self._horizontal_drag_velocity = 0.0
+            return
+        self._animate_horizontal_friction()
+
+    def _animate_horizontal_friction(self):
+        if abs(self._horizontal_drag_velocity) < 0.0005:
+            self._horizontal_drag_velocity = 0.0
+            self._horizontal_drag_inertia_id = None
+            return
+
+        current = float(self.tree.xview()[0])
+        next_scroll = current + self._horizontal_drag_velocity
+        next_scroll = max(0.0, min(next_scroll, 1.0))
+        self.tree.xview_moveto(next_scroll)
+        self._horizontal_drag_velocity *= 0.88
+        self._horizontal_drag_inertia_id = self.root.after(16, self._animate_horizontal_friction)
+
+    def _on_mouse_wheel_horizontal(self, event):
+        try:
+            delta = -event.delta / 120
+        except AttributeError:
+            delta = 0
+
+        if delta == 0:
+            return "break"
+
+        current = float(self.tree.xview()[0])
+        self.tree.xview_moveto(max(0.0, min(1.0, current + delta * 0.04)))
+        return "break"
+
     def toggle_mode(self):
         if self.theme_switch.get() == 1:
             ctk.set_appearance_mode("light")
+            self.is_dark_mode = False
             self.theme_switch.configure(text="Modo Escuro")
         else:
             ctk.set_appearance_mode("dark")
+            self.is_dark_mode = True
             self.theme_switch.configure(text="Modo Claro")
+        self._apply_theme_colors()
 
     def aplicar_estilo(self):
         # Aplica o estilo completo
@@ -185,26 +300,6 @@ class DataCleanerApp:
         else:
             messagebox.showwarning("Aviso", "Não há dados para mostrar.")
 
-    # Método para remover duplicata
-    def remove_duplicates(self):
-        if self.data is not None:
-            self.data_history.append(self.data.copy())
-            original_length = len(self.data)
-            
-            # Repassando a bola para o cleaner!
-            self.data = cleaner.remove_duplicates(self.data)
-            
-            new_length = len(self.data)
-            if new_length < original_length:
-                self.show_data()
-                messagebox.showinfo("Sucesso", f"Duplicatas removidas: {original_length - new_length} entradas.")
-            else:
-                self.data_history.pop() # Remove histórico inútil
-                messagebox.showinfo("Aviso", "Nenhuma duplicata encontrada.")
-        else:
-            messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
-
-   
     # Método para preencher valores ausentes 
     def fill_na(self):
         if self.data is not None:
@@ -253,61 +348,203 @@ class DataCleanerApp:
         else:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
 
-    # Método para excluir uma coluna indesejada
+    # Método para remover duplicata
     def remove_duplicates(self):
         if self.data is not None:
             self.data_history.append(self.data.copy())
             original_length = len(self.data)
-            
-            # Repassando a bola para o cleaner!
+
             self.data = cleaner.remove_duplicates(self.data)
-            
+
             new_length = len(self.data)
             if new_length < original_length:
                 self.show_data()
                 messagebox.showinfo("Sucesso", f"Duplicatas removidas: {original_length - new_length} entradas.")
             else:
-                self.data_history.pop() # Remove histórico inútil
+                self.data_history.pop()
                 messagebox.showinfo("Aviso", "Nenhuma duplicata encontrada.")
         else:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
 
-    def filter_column(self):
-        if self.data is not None:
-            column_name = simpledialog.askstring("Filtrar por Coluna", "Digite o nome da coluna:")
-            
-            if column_name and column_name in self.data.columns:
-                # 1. Salva o estado atual na memória (para o botão Desfazer funcionar)
+    def standardize_data(self):
+        if self.data is None:
+            messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
+            return
+
+        modal = ctk.CTkToplevel(self.root)
+        modal.title("Padronizar Dados")
+        modal.geometry("440x250")
+        modal.transient(self.root)
+        modal.grab_set()
+        modal.configure(fg_color="#f3f7ff")
+
+        card = ctk.CTkFrame(modal, fg_color="#ffffff", corner_radius=20, border_width=1, border_color="#dfeaff")
+        card.pack(fill=tk.BOTH, expand=True, padx=18, pady=18)
+
+        title = ctk.CTkLabel(card, text="Padronizar texto", font=ctk.CTkFont(size=20, weight="bold"), text_color="#1b263b")
+        title.pack(anchor="w", padx=20, pady=(18, 4))
+
+        subtitle = ctk.CTkLabel(card, text="Escolha a coluna e o estilo de texto desejado.", font=ctk.CTkFont(size=12), text_color="#53627a")
+        subtitle.pack(anchor="w", padx=20, pady=(0, 12))
+
+        columns = ["Todas as colunas"] + list(self.data.columns)
+        column_var = tk.StringVar(value=columns[0])
+        case_var = tk.StringVar(value="minúsculas")
+
+        column_selector = ctk.CTkOptionMenu(card, values=columns, variable=column_var, width=260, fg_color="#edf4ff", button_color="#f4c27d", button_hover_color="#efb463")
+        column_selector.pack(padx=20, pady=(0, 12), fill=tk.X)
+
+        case_selector = ctk.CTkOptionMenu(card, values=["minúsculas", "maiúsculas", "título"], variable=case_var, width=260, fg_color="#edf4ff", button_color="#8ab6ff", button_hover_color="#72a5ff")
+        case_selector.pack(padx=20, pady=(0, 16), fill=tk.X)
+
+        def apply_standardization():
+            selected_column = column_var.get()
+            case_map = {
+                "minúsculas": "lower",
+                "maiúsculas": "upper",
+                "título": "title",
+            }
+            target_case = case_map.get(case_var.get(), "lower")
+
+            try:
                 if hasattr(self, 'data_history'):
                     self.data_history.append(self.data.copy())
-                
-                # 2. Substitui o DataFrame interno apenas pela coluna escolhida
-                self.data = self.data[[column_name]]
-                
-                # 3. Atualiza a tabela na tela imediatamente
+
+                if selected_column == "Todas as colunas":
+                    self.data = cleaner.standardize_dataframe(self.data, case=target_case)
+                    message = "Todos os textos foram padronizados."
+                else:
+                    self.data = cleaner.standardize_dataframe(self.data, column=selected_column, case=target_case)
+                    message = f"Coluna '{selected_column}' padronizada."
+
                 self.show_data()
-                self.show_popup(f"Filtro aplicado! Mostrando apenas a coluna: {column_name}")
-            else:
-                messagebox.showwarning("Atenção", "Nome da coluna inválido ou não preenchido!")
-        else:
+                messagebox.showinfo("Sucesso", message)
+                modal.destroy()
+            except Exception as exc:
+                messagebox.showerror("Erro", f"Não foi possível padronizar os dados: {exc}")
+
+        action_bar = ctk.CTkFrame(card, fg_color="transparent")
+        action_bar.pack(fill=tk.X, padx=20, pady=(0, 18))
+
+        cancel = ctk.CTkButton(action_bar, text="Cancelar", width=110, fg_color="#e6ecff", hover_color="#dfeaff", text_color="#1b263b", command=modal.destroy)
+        cancel.pack(side=tk.LEFT)
+
+        apply_btn = ctk.CTkButton(action_bar, text="Aplicar", width=110, fg_color="#7bd6a1", hover_color="#63c78f", text_color="#103022", command=apply_standardization)
+        apply_btn.pack(side=tk.RIGHT)
+
+    def filter_column(self):
+        if self.data is None:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
+            return
+
+        if self.data.empty or self.data.columns.empty:
+            messagebox.showwarning("Aviso", "Não há colunas disponíveis para filtrar.")
+            return
+
+        modal = ctk.CTkToplevel(self.root)
+        modal.title("Filtrar por Coluna")
+        modal.geometry("420x240")
+        modal.minsize(420, 220)
+        modal.transient(self.root)
+        modal.grab_set()
+        modal.configure(fg_color="#f3f7ff")
+
+        card = ctk.CTkFrame(modal, fg_color="#ffffff", corner_radius=20, border_width=1, border_color="#dfeaff")
+        card.pack(fill=tk.BOTH, expand=True, padx=18, pady=18)
+
+        title = ctk.CTkLabel(card, text="Filtrar por coluna", font=ctk.CTkFont(size=20, weight="bold"), text_color="#1b263b")
+        title.pack(anchor="w", padx=20, pady=(18, 6))
+
+        subtitle = ctk.CTkLabel(card, text="Escolha a coluna que deseja manter na tabela.", font=ctk.CTkFont(size=12), text_color="#53627a")
+        subtitle.pack(anchor="w", padx=20, pady=(0, 12))
+
+        columns = list(self.data.columns)
+        selected = tk.StringVar(value=columns[0])
+        combo = ctk.CTkOptionMenu(card, values=columns, variable=selected, width=260, fg_color="#edf4ff", button_color="#8ab6ff", button_hover_color="#72a5ff")
+        combo.pack(padx=20, pady=(0, 16), fill=tk.X)
+
+        def apply_filter():
+            column_name = selected.get()
+            if not column_name or column_name not in self.data.columns:
+                messagebox.showwarning("Atenção", "Coluna inválida.")
+                return
+
+            if hasattr(self, 'data_history'):
+                self.data_history.append(self.data.copy())
+
+            self.data = self.data[[column_name]]
+            self.show_data()
+            self.show_popup(f"Filtro aplicado! Mostrando apenas a coluna: {column_name}")
+            modal.destroy()
+
+        action_bar = ctk.CTkFrame(card, fg_color="transparent")
+        action_bar.pack(fill=tk.X, padx=20, pady=(0, 18))
+
+        cancel = ctk.CTkButton(action_bar, text="Cancelar", width=110, fg_color="#e6ecff", hover_color="#dfeaff", text_color="#1b263b", command=modal.destroy)
+        cancel.pack(side=tk.LEFT)
+
+        apply_btn = ctk.CTkButton(action_bar, text="Aplicar", width=110, fg_color="#7bd6a1", hover_color="#63c78f", text_color="#103022", command=apply_filter)
+        apply_btn.pack(side=tk.RIGHT)
 
     # Método para filtrar dados por linha
     def filter_row(self):
-        row_number = simpledialog.askinteger("Filtrar por linha", "Digite o número da linha:")
-        
-        if row_number is not None and 1 <= row_number <= len(self.data):
+        if self.data is None:
+            messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
+            return
+
+        if self.data.empty:
+            messagebox.showwarning("Aviso", "Não há linhas para filtrar.")
+            return
+
+        modal = ctk.CTkToplevel(self.root)
+        modal.title("Filtrar por Linha")
+        modal.geometry("420x260")
+        modal.minsize(420, 230)
+        modal.transient(self.root)
+        modal.grab_set()
+        modal.configure(fg_color="#f3f7ff")
+
+        card = ctk.CTkFrame(modal, fg_color="#ffffff", corner_radius=20, border_width=1, border_color="#dfeaff")
+        card.pack(fill=tk.BOTH, expand=True, padx=18, pady=18)
+
+        title = ctk.CTkLabel(card, text="Filtrar por linha", font=ctk.CTkFont(size=20, weight="bold"), text_color="#1b263b")
+        title.pack(anchor="w", padx=20, pady=(18, 6))
+
+        subtitle = ctk.CTkLabel(card, text="Informe o número da linha que você deseja visualizar.", font=ctk.CTkFont(size=12), text_color="#53627a")
+        subtitle.pack(anchor="w", padx=20, pady=(0, 12))
+
+        row_var = tk.StringVar(value="1")
+        row_entry = ctk.CTkEntry(card, textvariable=row_var, width=260, placeholder_text="Ex: 12")
+        row_entry.pack(padx=20, pady=(0, 16), fill=tk.X)
+
+        def apply_filter():
+            try:
+                row_number = int(row_var.get())
+            except ValueError:
+                messagebox.showwarning("Atenção", "Digite um número válido para a linha.")
+                return
+
+            if not 1 <= row_number <= len(self.data):
+                messagebox.showwarning("Atenção", "Número da linha inválido!")
+                return
+
             row_data = self.data.iloc[row_number - 1]
-            result_window = tk.Toplevel(self.root)
-            result_window.title("Resultado do Filtro por Linha")
-            frame = tk.Frame(result_window)
-            frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+            result_window = ctk.CTkToplevel(self.root)
+            result_window.title(f"Linha {row_number}")
+            result_window.geometry("500x340")
+            result_window.resizable(True, True)
+            result_window.transient(self.root)
+            result_window.grab_set()
+            result_window.configure(fg_color="#f3f7ff")
 
-            label = tk.Label(frame, text=f"Linha {row_number}:", font=("Arial", 14, "bold"))
-            label.pack(anchor="w")
+            result_card = ctk.CTkFrame(result_window, fg_color="#ffffff", corner_radius=20, border_width=1, border_color="#dfeaff")
+            result_card.pack(fill=tk.BOTH, expand=True, padx=18, pady=18)
 
-            text_box = tk.Text(frame, wrap=tk.WORD)
-            text_box.pack(fill=tk.BOTH, expand=True)
+            label = ctk.CTkLabel(result_card, text=f"Linha {row_number}", font=ctk.CTkFont(size=18, weight="bold"), text_color="#1b263b")
+            label.pack(anchor="w", padx=18, pady=(16, 10))
+
+            text_box = tk.Text(result_card, wrap=tk.WORD, height=12, bg="#f9fbff", fg="#1b263b", font=("Segoe UI", 10), relief="flat")
+            text_box.pack(fill=tk.BOTH, expand=True, padx=18, pady=(0, 12))
 
             for column, value in row_data.items():
                 if pd.isna(value):
@@ -316,10 +553,18 @@ class DataCleanerApp:
 
             text_box.config(state=tk.DISABLED)
 
-            close_button = tk.Button(frame, text="Fechar", command=result_window.destroy)
-            close_button.pack(pady=5)
-        else:
-            messagebox.showwarning("Atenção", "Número da linha inválido!")
+            close_button = ctk.CTkButton(result_card, text="Fechar", width=120, command=result_window.destroy, fg_color="#e6ecff", hover_color="#dfeaff", text_color="#1b263b")
+            close_button.pack(anchor="e", padx=18, pady=(0, 16))
+            modal.destroy()
+
+        action_bar = ctk.CTkFrame(card, fg_color="transparent")
+        action_bar.pack(fill=tk.X, padx=20, pady=(0, 18))
+
+        cancel = ctk.CTkButton(action_bar, text="Cancelar", width=110, fg_color="#e6ecff", hover_color="#dfeaff", text_color="#1b263b", command=modal.destroy)
+        cancel.pack(side=tk.LEFT)
+
+        apply_btn = ctk.CTkButton(action_bar, text="Visualizar", width=110, fg_color="#b99cff", hover_color="#a889ff", text_color="#1f1638", command=apply_filter)
+        apply_btn.pack(side=tk.RIGHT)
 
 
 
@@ -395,8 +640,3 @@ class DataCleanerApp:
             messagebox.showinfo("Desfazer", "Última ação desfeita com sucesso!")
         else:
             messagebox.showwarning("Aviso", "Não há nenhuma ação para desfazer.")
-# Executar a aplicação
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = DataCleanerApp(root)
-    root.mainloop()
