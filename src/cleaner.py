@@ -1,10 +1,21 @@
+"""Módulo de utilidades para padronização e limpeza de dados.
+
+Este arquivo concentra as funções de processamento de DataFrame que
+são reutilizadas pela interface gráfica. O objetivo é manter a lógica
+seca, testável e independente da camada visual.
+"""
+
 import unicodedata
 
 import pandas as pd
 
 
 def standardize_text(value, case="lower"):
-    """Padroniza um valor textual, removendo acentos e espaços extras."""
+    """Padroniza um valor textual, removendo acentos e espaços extras.
+
+    Funcionalidade principal: tornar registros textuais consistentes antes
+    de salvar ou comparar dados, por exemplo nomes, cidades e textos livres.
+    """
     if pd.isna(value):
         return value
 
@@ -22,7 +33,12 @@ def standardize_text(value, case="lower"):
 
 
 def standardize_dataframe(data, column=None, case="lower"):
-    """Padroniza textos de uma coluna ou de todas as colunas textuais do DataFrame."""
+    """Padroniza textos de uma coluna ou de todas as colunas textuais do DataFrame.
+
+    Quando `column` for informado, aplica a regra somente naquela coluna.
+    Caso contrário, percorre as colunas de texto do DataFrame e faz a
+    padronização em lote.
+    """
     result = data.copy()
 
     if column is not None:

@@ -1,4 +1,12 @@
 # interface.py
+"""Camada visual do aplicativo DataPolisher.
+
+Este arquivo centraliza a interface gráfica, os fluxos de interação e
+as ações que operam sobre o DataFrame carregado. Em termos práticos,
+esta classe funciona como o cérebro do app: carrega arquivos, expõe os
+botões de funcionalidade, aplica limpezas e atualiza a tabela visível.
+"""
+
 import os
 import cleaner
 import tkinter as tk
@@ -8,7 +16,18 @@ import pandas as pd
 import customtkinter as ctk
 
 class DataCleanerApp:
+    """Aplicativo principal de limpeza e padronização de dados.
+
+    Esta classe concentra a lógica de interface, os fluxos de interação e as
+    ações sobre o DataFrame carregado. Em termos de uso, ela funciona como o
+    centro operacional do app: carrega arquivos, exibe dados, aplica
+    transformações e exporta o resultado final.
+    """
+
     def __init__(self, root):
+        # Bloco principal da interface: inicialização do app e do estado geral.
+        # Aqui ficam os dados ativos, o histórico do undo e as configurações
+        # visuais que afetam toda a aplicação.
         self.root = root
         self.root.title("DataPolisher - Limpeza de Dados")
         self.root.configure(fg_color="#edf4ff")
@@ -28,6 +47,8 @@ class DataCleanerApp:
             print(f"Aviso: Ícone não encontrado. {e}")
 
         # --- CABEÇALHO DO APP ---
+        # Área visual destinada à identidade do produto e ao contexto geral da
+        # ferramenta. Mantém o app com uma linguagem mais profissional e clara.
         self.header_frame = ctk.CTkFrame(self.root, fg_color="transparent")
         self.header_frame.pack(pady=(15, 5), padx=20, fill=tk.X)
         
@@ -43,6 +64,8 @@ class DataCleanerApp:
         # ----------------------------------------------------
 
         # --- FRAME DA TABELA ---
+        # Área central de visualização dos dados. É aqui que a tabela fica
+        # exposta ao usuário, com scroll vertical e interações de navegação.
         self.frame = ctk.CTkFrame(self.root, corner_radius=18, fg_color="#f9fbff", border_color="#dfeaff", border_width=1)
         self.frame.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
 
@@ -75,10 +98,15 @@ class DataCleanerApp:
         self.tree.bind("<Shift-MouseWheel>", self._on_mouse_wheel_horizontal)
 
         # --- FRAME DOS BOTÕES ---
+        # Organização principal do esquema de botões do app.
+        # Este bloco reúne as ações principais para limpeza, filtro,
+        # salvamento e controle de estado da tabela.
         self.button_frame = ctk.CTkFrame(self.root, fg_color="transparent")
         self.button_frame.pack(pady=10, padx=20, fill=tk.X)
 
         # --- BOTÕES MODERNOS ---
+        # Cada botão representa uma funcionalidade específica do fluxo de
+        # tratamento de dados. A ideia é deixar a navegação clara e intuitiva.
         button_font = ctk.CTkFont(size=12, weight="bold")
         common_button_opts = {
             "corner_radius": 10,
@@ -124,6 +152,7 @@ class DataCleanerApp:
         self.frame.grid_rowconfigure(0, weight=1)
         self.button_frame.grid_columnconfigure((0, 1, 2, 3, 4), weight=1)
     def _get_theme_colors(self):
+        # Esquema de cores dinâmico para manter o app legível em modo claro e escuro.
         if self.is_dark_mode:
             return {
                 "bg": "#111827",
@@ -169,6 +198,8 @@ class DataCleanerApp:
             self.style.map("Treeview.Heading", background=[("active", colors["heading_active"])])
 
     def _start_horizontal_drag(self, event):
+        # Navegação horizontal da tabela em desktop, simulando gesto de swipe.
+        # Isso melhora a experiência quando a tabela tem muitas colunas.
         self._horizontal_drag_active = True
         self._horizontal_drag_start_x = event.x
         self._horizontal_drag_start_scroll = float(self.tree.xview()[0])
@@ -229,6 +260,7 @@ class DataCleanerApp:
         return "break"
 
     def toggle_mode(self):
+        # Alterna o tema visual do app sem mexer na lógica dos dados.
         if self.theme_switch.get() == 1:
             ctk.set_appearance_mode("light")
             self.is_dark_mode = False
@@ -243,8 +275,9 @@ class DataCleanerApp:
         # Aplica o estilo completo
         aplicar_estilo(self.root, self.is_dark_mode)
 
-    # Método para carregar o arquivo CSV
-    # Método para carregar arquivos (Agora com múltiplos formatos)
+    # Funcionalidade de carregamento de dados.
+    # Aceita CSV, Excel, ODS e JSON, e depois prepara o DataFrame para
+    # as ações de limpeza e visualização na tabela.
     def load_file(self):
         # 1. Expandimos as opções de filtros na janela de abrir arquivo
         tipos_de_arquivos = [
@@ -285,6 +318,8 @@ class DataCleanerApp:
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao carregar o arquivo: {e}")
     def show_data(self):
+        # Atualiza a interface com o estado atual do DataFrame.
+        # Esse bloco é o ponto central de sincronização entre dados e tabela.
         for i in self.tree.get_children():
             self.tree.delete(i)
 
@@ -300,7 +335,9 @@ class DataCleanerApp:
         else:
             messagebox.showwarning("Aviso", "Não há dados para mostrar.")
 
-    # Método para preencher valores ausentes 
+    # Funcionalidade de preenchimento de nulos.
+    # Permite preencher toda a base ou apenas uma coluna, com conversão
+    # automática de valores numéricos para manter a consistência do tipo.
     def fill_na(self):
         if self.data is not None:
             if self.data.isnull().values.any():
@@ -348,7 +385,9 @@ class DataCleanerApp:
         else:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
 
-    # Método para remover duplicata
+    # Funcionalidade para remover registros duplicados.
+    # Útil quando a base de dados foi importada de mais de uma fonte e
+    # existe repetição de linhas sem valor real.
     def remove_duplicates(self):
         if self.data is not None:
             self.data_history.append(self.data.copy())
@@ -366,6 +405,9 @@ class DataCleanerApp:
         else:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
 
+    # Funcionalidade de padronização textual.
+    # Centraliza a regra de normalização para colunas de texto, ajudando a
+    # deixar nomes, cidades e campos livres com um padrão consistente.
     def standardize_data(self):
         if self.data is None:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
@@ -432,6 +474,8 @@ class DataCleanerApp:
         apply_btn = ctk.CTkButton(action_bar, text="Aplicar", width=110, fg_color="#7bd6a1", hover_color="#63c78f", text_color="#103022", command=apply_standardization)
         apply_btn.pack(side=tk.RIGHT)
 
+    # Funcionalidade de filtro por coluna.
+    # Mantém apenas a coluna escolhida para análise focada ou revisão rápida.
     def filter_column(self):
         if self.data is None:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
@@ -486,7 +530,8 @@ class DataCleanerApp:
         apply_btn = ctk.CTkButton(action_bar, text="Aplicar", width=110, fg_color="#7bd6a1", hover_color="#63c78f", text_color="#103022", command=apply_filter)
         apply_btn.pack(side=tk.RIGHT)
 
-    # Método para filtrar dados por linha
+    # Funcionalidade de filtro por linha.
+    # Abre uma visualização detalhada da linha selecionada para revisão manual.
     def filter_row(self):
         if self.data is None:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
@@ -568,7 +613,8 @@ class DataCleanerApp:
 
 
 
-    # Método para excluir uma coluna indesejada
+    # Funcionalidade de exclusão de colunas.
+    # Remove campos irrelevantes, descartáveis ou redundantes da base atual.
     def delete_column(self):
         if self.data is not None:
             column_name = simpledialog.askstring("Excluir Coluna", "Digite o nome da coluna:")
@@ -586,7 +632,8 @@ class DataCleanerApp:
         else:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")        
 
-    # Método para mostrar os dados na janela pop-up
+    # Janela de retorno visual para mensagens rápidas.
+    # Usada para confirmar ações e avisar sobre estados importantes da base.
     def show_popup(self, message):
         popup = Toplevel(self.root)
         popup.title("Resultado")
@@ -597,7 +644,9 @@ class DataCleanerApp:
         ok_button = tk.Button(popup, text="OK", command=popup.destroy)
         ok_button.pack(pady=10)
 
-    # Método para salvar o DataFrame em diferentes formatos
+    # Funcionalidade de exportação.
+    # Permite salvar os dados tratados em CSV, Excel ou JSON conforme a
+    # necessidade do usuário ou do fluxo de trabalho.
     def save_file(self):
         if self.data is not None:
             file_path = filedialog.asksaveasfilename(defaultextension=".csv",
@@ -612,7 +661,9 @@ class DataCleanerApp:
         else:
             messagebox.showwarning("Aviso", "Não há dados para salvar.")
 
-    # Método que centraliza a lógica de salvamento
+    # Bloco central de exportação do DataFrame.
+    # Recebe o caminho escolhido e aplica o formato correto sem espalhar a
+    # lógica de salvamento pelo restante da interface.
     def save_data(self, file_path):
         if file_path.endswith('.csv'):
             self.data.to_csv(file_path, index=False)
@@ -631,7 +682,9 @@ class DataCleanerApp:
             messagebox.showerror("Erro", "Formato de arquivo não suportado.")
 
 
-    # Método para desfazer a última ação
+    # Funcionalidade de desfazer.
+    # Restaura o último estado do DataFrame antes da última operação,
+    # funcionando como mecanismo de segurança para correções rápidas.
     def undo_action(self):
         if self.data_history: # Verifica se existe algum histórico salvo
             # Pega o último estado salvo e remove da lista de histórico

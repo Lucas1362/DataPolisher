@@ -1,7 +1,21 @@
+"""Módulo auxiliar de estilo visual do aplicativo.
+
+Este arquivo define a paleta de cores e ajustes de aparência para os widgets
+Tkinter. Ele funciona como apoio visual para o fluxo principal do app,
+permitindo que a interface ajuste a estética para modo claro ou escuro.
+"""
+
 import tkinter as tk
 from tkinter import ttk
 
+
 def aplicar_estilo(tk_root, is_dark_mode):
+    """Aplica o esquema visual do app conforme o tema ativo.
+
+    A função recebe a janela raiz e o estado do modo atual, e então ajusta
+    as cores do fundo, botões, labels e entradas para manter a interface
+    consistente no modo claro ou escuro.
+    """
     # Definições de cores para os modos
     cores = {
         "dark": {
