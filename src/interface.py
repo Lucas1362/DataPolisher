@@ -1,92 +1,124 @@
 # interface.py
+import os
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, Toplevel
-from estilo import aplicar_estilo
 from tkinter import ttk
 import pandas as pd
-import matplotlib.pyplot as plt
+import customtkinter as ctk
 
 class DataCleanerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Data Cleaner")  # Define o título da janela
-        self.root.iconbitmap("D:\\vscode\\DataPolisher\\i.asidj\\iconeData1.ico")  # Adiciona o ícone à janela
+        self.root.title("DataPolisher - Limpeza de Dados")
         self.data = None
-        self.is_dark_mode = False  # Inicializa o modo escuro como False
+        self.data_history = []
+        
+        # --- ÍCONE ---
+        diretorio_atual = os.path.dirname(__file__) 
+        caminho_icone = os.path.join(diretorio_atual, "..", "assets", "iconeData1.png")
+        try:
+            icone = tk.PhotoImage(file=caminho_icone)
+            self.root.iconphoto(False, icone)
+        except Exception as e:
+            print(f"Aviso: Ícone não encontrado. {e}")
 
-        # Frame para a tabela
-        self.frame = tk.Frame(root)
-        self.frame.pack(pady=10, fill=tk.BOTH, expand=True)
+        # --- FRAME DA TABELA ---
+        self.frame = ctk.CTkFrame(self.root, corner_radius=10)
+        self.frame.pack(pady=20, padx=20, fill=tk.BOTH, expand=True)
 
-        # Configuração da tabela de visualização
         self.tree = ttk.Treeview(self.frame)
-        self.tree.grid(row=0, column=0, sticky='nsew')
+        self.tree.grid(row=0, column=0, sticky='nsew', padx=10, pady=10)
 
-        # Barras de rolagem
-        self.scrollbar_y = ttk.Scrollbar(self.frame, orient="vertical", command=self.tree.yview)
-        self.scrollbar_y.grid(row=0, column=1, sticky='ns')
+        self.scrollbar_y = ctk.CTkScrollbar(self.frame, orientation="vertical", command=self.tree.yview)
+        self.scrollbar_y.grid(row=0, column=1, sticky='ns', pady=10)
 
-        self.scrollbar_x = ttk.Scrollbar(root, orient="horizontal", command=self.tree.xview)
-        self.scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
-
-        # Configura a tabela para usar as barras de rolagem
+        self.scrollbar_x = ctk.CTkScrollbar(self.root, orientation="horizontal", command=self.tree.xview)
+        self.scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=(0, 20))
         self.tree.configure(yscrollcommand=self.scrollbar_y.set, xscrollcommand=self.scrollbar_x.set)
 
-        # Frame para os botões
-        self.button_frame = tk.Frame(root)
-        self.button_frame.pack(pady=10, fill=tk.X)
+        # --- FRAME DOS BOTÕES ---
+        self.button_frame = ctk.CTkFrame(self.root, fg_color="transparent")
+        self.button_frame.pack(pady=10, padx=20, fill=tk.X)
 
-        # Botões da interface
-        self.load_button = tk.Button(self.button_frame, text="Carregar Arquivo CSV", command=self.load_file)
-        self.load_button.grid(row=0, column=0, padx=5, pady=5, sticky='ew')
+        # --- BOTÕES MODERNOS ---
+        self.load_button = ctk.CTkButton(self.button_frame, text="Carregar Arquivo", command=self.load_file, width=180)
+        self.load_button.grid(row=0, column=0, padx=10, pady=10)
 
-        self.remove_duplicates_button = tk.Button(self.button_frame, text="Remover Duplicatas", command=self.remove_duplicates)
-        self.remove_duplicates_button.grid(row=1, column=0, padx=5, pady=5, sticky='ew')
+        self.remove_duplicates_button = ctk.CTkButton(self.button_frame, text="Remover Duplicatas", command=self.remove_duplicates, width=180)
+        self.remove_duplicates_button.grid(row=0, column=1, padx=10, pady=10)
 
-        self.fill_na_button = tk.Button(self.button_frame, text="Preencher Valores Ausentes", command=self.fill_na)
-        self.fill_na_button.grid(row=2, column=0, padx=5, pady=5, sticky='ew')
+        self.fill_na_button = ctk.CTkButton(self.button_frame, text="Preencher Nulos", command=self.fill_na, width=180)
+        self.fill_na_button.grid(row=0, column=2, padx=10, pady=10)
 
-        self.filter_column_button = tk.Button(self.button_frame, text="Filtrar Dados por Coluna", command=self.filter_column)
-        self.filter_column_button.grid(row=3, column=0, padx=5, pady=5, sticky='ew')
+        self.filter_column_button = ctk.CTkButton(self.button_frame, text="Filtrar por Coluna", command=self.filter_column, width=180)
+        self.filter_column_button.grid(row=1, column=0, padx=10, pady=10)
 
-        self.filter_row_button = tk.Button(self.button_frame, text="Filtrar Dados por Linha", command=self.filter_row)
-        self.filter_row_button.grid(row=4, column=0, padx=5, pady=5, sticky='ew')
+        self.undo_button = ctk.CTkButton(self.button_frame, text="Desfazer Ação", command=self.undo_action, width=180, fg_color="#d9534f", hover_color="#c9302c")
+        self.undo_button.grid(row=1, column=1, padx=10, pady=10)
 
-        self.save_button = tk.Button(self.button_frame, text="Salvar Arquivo Limpo", command=self.save_file)
-        self.save_button.grid(row=5, column=0, padx=5, pady=5, sticky='ew')
+        self.save_button = ctk.CTkButton(self.button_frame, text="Salvar Arquivo", command=self.save_file, width=180, fg_color="#5cb85c", hover_color="#4cae4c")
+        self.save_button.grid(row=1, column=2, padx=10, pady=10)
 
-        # Botão para alternar entre modos
-        self.toggle_mode_button = tk.Button(self.button_frame, text="Alternar Modo", command=self.toggle_mode)
-        self.toggle_mode_button.grid(row=6, column=0, padx=5, pady=5, sticky='ew')
+        self.theme_switch = ctk.CTkSwitch(self.button_frame, text="Modo Claro", command=self.toggle_mode)
+        self.theme_switch.grid(row=0, column=3, rowspan=2, padx=20, pady=10)
 
-        # Configura a coluna e linha para expandir
         self.frame.grid_columnconfigure(0, weight=1)
         self.frame.grid_rowconfigure(0, weight=1)
-        self.button_frame.grid_columnconfigure(0, weight=1)  # Para os botões
+        self.button_frame.grid_columnconfigure((0, 1, 2, 3), weight=1)
 
-        self.aplicar_estilo()  # Aplica o estilo inicial
-
-    # Método para alternar entre modos
     def toggle_mode(self):
-        self.is_dark_mode = not self.is_dark_mode  # Alterna o modo
-        self.aplicar_estilo()  # Aplica o novo estilo
+        if self.theme_switch.get() == 1:
+            ctk.set_appearance_mode("light")
+            self.theme_switch.configure(text="Modo Escuro")
+        else:
+            ctk.set_appearance_mode("dark")
+            self.theme_switch.configure(text="Modo Claro")
 
     def aplicar_estilo(self):
         # Aplica o estilo completo
         aplicar_estilo(self.root, self.is_dark_mode)
 
     # Método para carregar o arquivo CSV
+    # Método para carregar arquivos (Agora com múltiplos formatos)
     def load_file(self):
-        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        # 1. Expandimos as opções de filtros na janela de abrir arquivo
+        tipos_de_arquivos = [
+            ("Planilhas e Dados", "*.csv *.xlsx *.xls *.ods *.json"),
+            ("Arquivos CSV", "*.csv"),
+            ("Excel", "*.xlsx *.xls"),
+            ("LibreOffice Calc", "*.ods"),
+            ("JSON", "*.json"),
+            ("Todos os arquivos", "*.*")
+        ]
+        
+        file_path = filedialog.askopenfilename(filetypes=tipos_de_arquivos)
+        
         if file_path:
             try:
-                self.data = pd.read_csv(file_path)
+                # 2. Verifica a extensão para escolher o método certo do Pandas
+                if file_path.endswith('.csv'):
+                    self.data = pd.read_csv(file_path)
+                elif file_path.endswith(('.xlsx', '.xls')):
+                    self.data = pd.read_excel(file_path)
+                elif file_path.endswith('.ods'):
+                    self.data = pd.read_excel(file_path, engine="odf") # LibreOffice
+                elif file_path.endswith('.json'):
+                    self.data = pd.read_json(file_path)
+                elif file_path.endswith('.pdf'):
+                    messagebox.showwarning("Aviso", "Ainda não suportamos leitura de PDF. Escolha Excel ou CSV.")
+                    return
+                else:
+                    messagebox.showerror("Erro", "Formato de arquivo não suportado.")
+                    return
+
+                # Limpa o histórico de ações ao carregar um arquivo novo (se você já adicionou o desfazer)
+                if hasattr(self, 'data_history'):
+                    self.data_history = [] 
+
                 self.show_data()
-                messagebox.showinfo("Sucesso", "Arquivo carregado com sucesso!")
+                messagebox.showinfo("Sucesso", f"Arquivo carregado com sucesso!\n{self.data.shape[0]} linhas e {self.data.shape[1]} colunas.")
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao carregar o arquivo: {e}")
-
-    # Método para mostrar os dados na Treeview
     def show_data(self):
         for i in self.tree.get_children():
             self.tree.delete(i)
@@ -106,6 +138,7 @@ class DataCleanerApp:
     # Método para remover duplicatas
     def remove_duplicates(self):
         if self.data is not None:
+            self.data_history.append(self.data.copy())  # Salva o estado atual antes de modificar
             original_length = len(self.data)
             self.data.drop_duplicates(inplace=True)
             new_length = len(self.data)
@@ -120,6 +153,7 @@ class DataCleanerApp:
     # Método para preencher valores ausentes
     def fill_na(self):
         if self.data is not None:
+            self.data_history.append(self.data.copy())  # Salva o estado atual antes de modificar
             if self.data.isnull().values.any():
                 # Pergunta ao usuário qual texto usar para os valores ausentes
                 replacement_text = simpledialog.askstring("Substituir valores ausentes", 
@@ -137,32 +171,24 @@ class DataCleanerApp:
 
     # Método para filtrar dados por coluna
     def filter_column(self):
-        column_name = simpledialog.askstring("Filtrar por Coluna", "Digite o nome da coluna:")
-        
-        if column_name is not None and column_name in self.data.columns:
-            column_data = self.data[column_name]
-            result_window = tk.Toplevel(self.root)
-            result_window.title("Resultado do Filtro por Coluna")
-            frame = tk.Frame(result_window)
-            frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
-
-            label = tk.Label(frame, text=f"Coluna: {column_name}", font=("Arial", 14, "bold"))
-            label.pack(anchor="w")
-
-            text_box = tk.Text(frame, wrap=tk.WORD)
-            text_box.pack(fill=tk.BOTH, expand=True)
-
-            for index, value in enumerate(column_data):
-                if pd.isna(value):
-                    value = "Dados não disponíveis"
-                text_box.insert(tk.END, f"Linha {index + 1}: {value}\n")
-
-            text_box.config(state=tk.DISABLED)
-
-            close_button = tk.Button(frame, text="Fechar", command=result_window.destroy)
-            close_button.pack(pady=5)
+        if self.data is not None:
+            column_name = simpledialog.askstring("Filtrar por Coluna", "Digite o nome da coluna:")
+            
+            if column_name and column_name in self.data.columns:
+                # 1. Salva o estado atual na memória (para o botão Desfazer funcionar)
+                if hasattr(self, 'data_history'):
+                    self.data_history.append(self.data.copy())
+                
+                # 2. Substitui o DataFrame interno apenas pela coluna escolhida
+                self.data = self.data[[column_name]]
+                
+                # 3. Atualiza a tabela na tela imediatamente
+                self.show_data()
+                self.show_popup(f"Filtro aplicado! Mostrando apenas a coluna: {column_name}")
+            else:
+                messagebox.showwarning("Atenção", "Nome da coluna inválido ou não preenchido!")
         else:
-            messagebox.showwarning("Atenção", "Nome da coluna inválido!")
+            messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
 
     # Método para filtrar dados por linha
     def filter_row(self):
@@ -237,6 +263,16 @@ class DataCleanerApp:
         else:
             messagebox.showerror("Erro", "Formato de arquivo não suportado.")
 
+
+    # Método para desfazer a última ação
+    def undo_action(self):
+        if self.data_history: # Verifica se existe algum histórico salvo
+            # Pega o último estado salvo e remove da lista de histórico
+            self.data = self.data_history.pop() 
+            self.show_data() # Atualiza a tabela na tela
+            messagebox.showinfo("Desfazer", "Última ação desfeita com sucesso!")
+        else:
+            messagebox.showwarning("Aviso", "Não há nenhuma ação para desfazer.")
 # Executar a aplicação
 if __name__ == "__main__":
     root = tk.Tk()

@@ -1,0 +1,13 @@
+# Ignora arquivos de compilação do Python
+__pycache__/
+*.pyc
+
+
+data/
+*.csv
+*.xlsx
+*.json
+
+# Ignora pastas de ambiente virtual
+.venv/
+venv/
