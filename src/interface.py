@@ -1,5 +1,6 @@
 # interface.py
 import os
+import cleaner
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, Toplevel
 from tkinter import ttk
@@ -22,9 +23,50 @@ class DataCleanerApp:
         except Exception as e:
             print(f"Aviso: Ícone não encontrado. {e}")
 
+        # --- CABEÇALHO DO APP ---
+        self.header_frame = ctk.CTkFrame(self.root, fg_color="transparent")
+        self.header_frame.pack(pady=(15, 5), padx=20, fill=tk.X)
+        
+        self.title_label = ctk.CTkLabel(self.header_frame, text="DataPolisher Studio", font=ctk.CTkFont(size=24, weight="bold"))
+        self.title_label.pack(side=tk.LEFT, padx=10)
+        
+        self.subtitle_label = ctk.CTkLabel(self.header_frame, text="Higienização inteligente de dados", font=ctk.CTkFont(size=14, slant="italic"), text_color="gray")
+        self.subtitle_label.pack(side=tk.LEFT, padx=5, pady=(8,0))
+
+        # --- ESTILO DA TABELA (Deixando moderna e escura) ---
+        style = ttk.Style()
+        style.theme_use("default")
+        
+        # Cores do Modo Escuro
+        bg_color = "#2b2b2b"
+        fg_color = "white"
+        selected_color = "#1f538d" # Azul padrão do CustomTkinter
+        
+        style.configure("Treeview",
+                        background=bg_color,
+                        foreground=fg_color,
+                        rowheight=30, # Linhas mais gordinhas e confortáveis
+                        fieldbackground=bg_color,
+                        bordercolor="#343638",
+                        borderwidth=0)
+        
+        # Remove as bordas feias e pinta a linha selecionada
+        style.map('Treeview', background=[('selected', selected_color)])
+        
+        # Estilo do Cabeçalho da Tabela
+        style.configure("Treeview.Heading",
+                        background="#3b3b3b",
+                        foreground=fg_color,
+                        font=('Arial', 10, 'bold'),
+                        relief="flat",
+                        padding=5)
+        
+        style.map("Treeview.Heading", background=[('active', '#4b4b4b')])
+        # ----------------------------------------------------
+
         # --- FRAME DA TABELA ---
         self.frame = ctk.CTkFrame(self.root, corner_radius=10)
-        self.frame.pack(pady=20, padx=20, fill=tk.BOTH, expand=True)
+        self.frame.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
 
         self.tree = ttk.Treeview(self.frame)
         self.tree.grid(row=0, column=0, sticky='nsew', padx=10, pady=10)
@@ -33,7 +75,7 @@ class DataCleanerApp:
         self.scrollbar_y.grid(row=0, column=1, sticky='ns', pady=10)
 
         self.scrollbar_x = ctk.CTkScrollbar(self.root, orientation="horizontal", command=self.tree.xview)
-        self.scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=(0, 20))
+        self.scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=(0, 15))
         self.tree.configure(yscrollcommand=self.scrollbar_y.set, xscrollcommand=self.scrollbar_x.set)
 
         # --- FRAME DOS BOTÕES ---
@@ -41,31 +83,39 @@ class DataCleanerApp:
         self.button_frame.pack(pady=10, padx=20, fill=tk.X)
 
         # --- BOTÕES MODERNOS ---
-        self.load_button = ctk.CTkButton(self.button_frame, text="Carregar Arquivo", command=self.load_file, width=180)
-        self.load_button.grid(row=0, column=0, padx=10, pady=10)
+        # LINHA 0 (4 botões)
+        self.load_button = ctk.CTkButton(self.button_frame, text="Carregar Arquivo", command=self.load_file, width=160)
+        self.load_button.grid(row=0, column=0, padx=8, pady=10)
 
-        self.remove_duplicates_button = ctk.CTkButton(self.button_frame, text="Remover Duplicatas", command=self.remove_duplicates, width=180)
-        self.remove_duplicates_button.grid(row=0, column=1, padx=10, pady=10)
+        self.remove_duplicates_button = ctk.CTkButton(self.button_frame, text="Remover Duplicatas", command=self.remove_duplicates, width=160)
+        self.remove_duplicates_button.grid(row=0, column=1, padx=8, pady=10)
 
-        self.fill_na_button = ctk.CTkButton(self.button_frame, text="Preencher Nulos", command=self.fill_na, width=180)
-        self.fill_na_button.grid(row=0, column=2, padx=10, pady=10)
-
-        self.filter_column_button = ctk.CTkButton(self.button_frame, text="Filtrar por Coluna", command=self.filter_column, width=180)
-        self.filter_column_button.grid(row=1, column=0, padx=10, pady=10)
-
-        self.undo_button = ctk.CTkButton(self.button_frame, text="Desfazer Ação", command=self.undo_action, width=180, fg_color="#d9534f", hover_color="#c9302c")
-        self.undo_button.grid(row=1, column=1, padx=10, pady=10)
-
-        self.save_button = ctk.CTkButton(self.button_frame, text="Salvar Arquivo", command=self.save_file, width=180, fg_color="#5cb85c", hover_color="#4cae4c")
-        self.save_button.grid(row=1, column=2, padx=10, pady=10)
+        self.fill_na_button = ctk.CTkButton(self.button_frame, text="Preencher Nulos", command=self.fill_na, width=160)
+        self.fill_na_button.grid(row=0, column=2, padx=8, pady=10)
 
         self.theme_switch = ctk.CTkSwitch(self.button_frame, text="Modo Claro", command=self.toggle_mode)
-        self.theme_switch.grid(row=0, column=3, rowspan=2, padx=20, pady=10)
+        self.theme_switch.grid(row=0, column=3, padx=15, pady=10)
 
+        # LINHA 1 (5 botões)
+        self.filter_column_button = ctk.CTkButton(self.button_frame, text="Filtrar Coluna", command=self.filter_column, width=140)
+        self.filter_column_button.grid(row=1, column=0, padx=6, pady=10)
+
+        self.filter_row_button = ctk.CTkButton(self.button_frame, text="Filtrar Linha", command=self.filter_row, width=140)
+        self.filter_row_button.grid(row=1, column=1, padx=6, pady=10)
+
+        self.delete_column_button = ctk.CTkButton(self.button_frame, text="Excluir Coluna", command=self.delete_column, width=140, fg_color="#d9534f", hover_color="#c9302c")
+        self.delete_column_button.grid(row=1, column=2, padx=6, pady=10)
+
+        self.undo_button = ctk.CTkButton(self.button_frame, text="Desfazer", command=self.undo_action, width=140, fg_color="#f0ad4e", hover_color="#ec971f")
+        self.undo_button.grid(row=1, column=3, padx=6, pady=10)
+
+        self.save_button = ctk.CTkButton(self.button_frame, text="Salvar", command=self.save_file, width=140, fg_color="#5cb85c", hover_color="#4cae4c")
+        self.save_button.grid(row=1, column=4, padx=6, pady=10)
+
+        # Ajuste de expansão
         self.frame.grid_columnconfigure(0, weight=1)
         self.frame.grid_rowconfigure(0, weight=1)
-        self.button_frame.grid_columnconfigure((0, 1, 2, 3), weight=1)
-
+        self.button_frame.grid_columnconfigure((0, 1, 2, 3, 4), weight=1)
     def toggle_mode(self):
         if self.theme_switch.get() == 1:
             ctk.set_appearance_mode("light")
@@ -135,41 +185,93 @@ class DataCleanerApp:
         else:
             messagebox.showwarning("Aviso", "Não há dados para mostrar.")
 
-    # Método para remover duplicatas
+    # Método para remover duplicata
     def remove_duplicates(self):
         if self.data is not None:
-            self.data_history.append(self.data.copy())  # Salva o estado atual antes de modificar
+            self.data_history.append(self.data.copy())
             original_length = len(self.data)
-            self.data.drop_duplicates(inplace=True)
+            
+            # Repassando a bola para o cleaner!
+            self.data = cleaner.remove_duplicates(self.data)
+            
             new_length = len(self.data)
             if new_length < original_length:
                 self.show_data()
-                self.show_popup(f"Duplicatas removidas: {original_length - new_length} entradas.")
+                messagebox.showinfo("Sucesso", f"Duplicatas removidas: {original_length - new_length} entradas.")
             else:
-                self.show_popup("Nenhuma duplicata encontrada.")
+                self.data_history.pop() # Remove histórico inútil
+                messagebox.showinfo("Aviso", "Nenhuma duplicata encontrada.")
         else:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
 
-    # Método para preencher valores ausentes
+   
+    # Método para preencher valores ausentes 
     def fill_na(self):
         if self.data is not None:
-            self.data_history.append(self.data.copy())  # Salva o estado atual antes de modificar
             if self.data.isnull().values.any():
-                # Pergunta ao usuário qual texto usar para os valores ausentes
-                replacement_text = simpledialog.askstring("Substituir valores ausentes", 
-                                                        "Digite o texto para substituir todos os valores ausentes:")
+                # 1. Pergunta qual coluna o usuário quer alterar
+                coluna = simpledialog.askstring("Preencher Nulos", "Qual coluna deseja preencher? (Deixe em branco para preencher TODAS)")
+                
+                if coluna is not None: # Se o usuário não clicou em "Cancelar"
+                    # 2. Pergunta o valor a ser inserido
+                    valor = simpledialog.askstring("Preencher Nulos", "Digite o valor para preencher os espaços vazios:")
+                    
+                    if valor is not None:
+                        # Salva o estado atual para o botão Desfazer
+                        if hasattr(self, 'data_history'):
+                            self.data_history.append(self.data.copy())
+                        
+                        # 3. MÁGICA: Tenta converter o que o usuário digitou para número. 
+                        # Isso impede que colunas numéricas virem texto!
+                        try:
+                            if '.' in valor or ',' in valor:
+                                valor = float(valor.replace(',', '.'))
+                            else:
+                                valor = int(valor)
+                        except ValueError:
+                            pass # Se não for número, mantém como texto normalmente
 
-                # Preencher todos os valores ausentes em todo o DataFrame
-                self.data.fillna(replacement_text, inplace=True)
+                        # 4. Aplica a mudança
+                        if coluna.strip() == "":
+                            # Se deixou em branco, preenche o DataFrame todo
+                            self.data = self.data.fillna(valor)
+                            msg = f"Todos os nulos foram preenchidos com: {valor}"
+                        elif coluna in self.data.columns:
+                            # Se digitou uma coluna válida, preenche só ela
+                            self.data[coluna] = self.data[coluna].fillna(valor)
+                            msg = f"Nulos da coluna '{coluna}' preenchidos com: {valor}"
+                        else:
+                            # Se digitou o nome da coluna errado
+                            messagebox.showwarning("Aviso", "Nome da coluna não encontrado!")
+                            self.data_history.pop() # Remove o histórico salvo pois a ação falhou
+                            return
 
-                self.show_data()
-                self.show_popup("Todos os valores ausentes foram preenchidos.")
+                        self.show_data()
+                        messagebox.showinfo("Sucesso", msg)
             else:
-                self.show_popup("Nenhum valor ausente encontrado no DataFrame.")
+                messagebox.showinfo("Aviso", "Nenhum valor ausente encontrado no DataFrame.")
         else:
             messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
 
-    # Método para filtrar dados por coluna
+    # Método para excluir uma coluna indesejada
+    def remove_duplicates(self):
+        if self.data is not None:
+            self.data_history.append(self.data.copy())
+            original_length = len(self.data)
+            
+            # Repassando a bola para o cleaner!
+            self.data = cleaner.remove_duplicates(self.data)
+            
+            new_length = len(self.data)
+            if new_length < original_length:
+                self.show_data()
+                messagebox.showinfo("Sucesso", f"Duplicatas removidas: {original_length - new_length} entradas.")
+            else:
+                self.data_history.pop() # Remove histórico inútil
+                messagebox.showinfo("Aviso", "Nenhuma duplicata encontrada.")
+        else:
+            messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
+
     def filter_column(self):
         if self.data is not None:
             column_name = simpledialog.askstring("Filtrar por Coluna", "Digite o nome da coluna:")
@@ -218,6 +320,26 @@ class DataCleanerApp:
             close_button.pack(pady=5)
         else:
             messagebox.showwarning("Atenção", "Número da linha inválido!")
+
+
+
+    # Método para excluir uma coluna indesejada
+    def delete_column(self):
+        if self.data is not None:
+            column_name = simpledialog.askstring("Excluir Coluna", "Digite o nome da coluna:")
+            if column_name and column_name in self.data.columns:
+                # Salva no histórico
+                self.data_history.append(self.data.copy())
+                
+                # Usa o nosso arquivo cleaner.py para fazer o trabalho pesado!
+                self.data = cleaner.delete_column(self.data, column_name)
+                
+                self.show_data()
+                messagebox.showinfo("Sucesso", f"Coluna '{column_name}' excluída!")
+            else:
+                messagebox.showwarning("Aviso", "Coluna inválida ou não encontrada.")
+        else:
+            messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")        
 
     # Método para mostrar os dados na janela pop-up
     def show_popup(self, message):
