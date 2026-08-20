@@ -5,8 +5,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import pandas as pd
+import tkinter as tk
+import customtkinter as ctk
 
 import cleaner
+from interface import DataCleanerApp
 
 
 class StandardizeTestCase(unittest.TestCase):
@@ -23,3 +26,38 @@ class StandardizeTestCase(unittest.TestCase):
         result = cleaner.standardize_dataframe(df, column="nome", case="lower")
 
         self.assertEqual(list(result["nome"]), ["joao", "maria", "ana"])
+
+    def test_theme_toggle_updates_switch_state(self):
+        root = ctk.CTk()
+        root.withdraw()
+        app = DataCleanerApp(root)
+
+        app.toggle_mode()
+
+        self.assertTrue(app.is_dark_mode)
+        self.assertEqual(app.theme_switch.get(), 1)
+        self.assertEqual(app.theme_switch.cget("text"), "Modo escuro")
+
+        root.destroy()
+
+    def test_settings_menu_can_collapse(self):
+        root = ctk.CTk()
+        root.withdraw()
+        app = DataCleanerApp(root)
+
+        self.assertFalse(app.menu_panel.pack_propagate())
+
+        root.destroy()
+
+    def test_language_change_updates_ui_texts(self):
+        root = ctk.CTk()
+        root.withdraw()
+        app = DataCleanerApp(root)
+
+        app.change_language("English")
+
+        self.assertEqual(app.language, "en")
+        self.assertEqual(app.load_button.cget("text"), "Load File")
+        self.assertEqual(app.theme_switch.cget("text"), "Light mode")
+
+        root.destroy()

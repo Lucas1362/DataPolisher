@@ -38,6 +38,8 @@ class DataCleanerApp:
         self.data = None
         self.data_history = []
         self.is_dark_mode = False
+        self.language = "pt"
+        self.font_scale = 1.0
         self.style = ttk.Style()
         
         # --- ÍCONE ---
@@ -60,6 +62,83 @@ class DataCleanerApp:
         
         self.subtitle_label = ctk.CTkLabel(self.header_frame, text="Higienização inteligente de dados", font=ctk.CTkFont(size=14, slant="italic"), text_color="gray")
         self.subtitle_label.pack(side=tk.LEFT, padx=5, pady=(8,0))
+
+        self.menu_group = ctk.CTkFrame(self.header_frame, fg_color="transparent")
+        self.menu_group.pack(side=tk.RIGHT, padx=10)
+
+        self.menu_label = ctk.CTkLabel(self.menu_group, text="Menu", font=ctk.CTkFont(size=12, weight="bold"))
+        self.menu_label.pack(side=tk.LEFT, padx=(0, 6))
+
+        self.menu_button = ctk.CTkButton(
+            self.menu_group,
+            text="▾",
+            command=self.toggle_settings_menu,
+            width=36,
+            height=28,
+            corner_radius=8,
+            fg_color="#dfeaff",
+            hover_color="#cfe0ff",
+            text_color="#1b263b",
+        )
+        self.menu_button.pack(side=tk.LEFT)
+
+        self.menu_panel = ctk.CTkFrame(
+            self.root,
+            corner_radius=12,
+            border_width=1,
+            border_color="#dfeaff",
+            fg_color="#f8fbff",
+            width=220,
+            height=0,
+        )
+        self.menu_panel.place_forget()
+        self.menu_panel.pack_propagate(False)
+
+        self.menu_content = ctk.CTkFrame(self.menu_panel, fg_color="transparent")
+        self.menu_content.pack_propagate(False)
+        self.menu_content.pack(padx=14, pady=12, fill=tk.X)
+
+        self.menu_settings_label = ctk.CTkLabel(self.menu_content, text="Configurações", font=ctk.CTkFont(size=12, weight="bold"))
+        self.menu_settings_label.pack(anchor="w", pady=(0, 8))
+
+        self.theme_switch = ctk.CTkSwitch(
+            self.menu_content,
+            text="Modo claro",
+            command=self.toggle_mode,
+            width=140,
+            height=28,
+            border_color="#9bb1d1",
+            fg_color="#d6e4ff",
+        )
+        self.theme_switch.pack(anchor="w", pady=(0, 8))
+
+        self.language_var = tk.StringVar(value="Português")
+        self.language_label = ctk.CTkLabel(self.menu_content, text="Idioma", font=ctk.CTkFont(size=12, weight="bold"))
+        self.language_label.pack(anchor="w", pady=(0, 4))
+        self.language_selector = ctk.CTkOptionMenu(
+            self.menu_content,
+            values=["Português", "English"],
+            variable=self.language_var,
+            width=140,
+            command=self.change_language,
+        )
+        self.language_selector.pack(anchor="w", pady=(0, 8))
+
+        self.font_label = ctk.CTkLabel(self.menu_content, text="Tamanho da fonte", font=ctk.CTkFont(size=12, weight="bold"))
+        self.font_label.pack(anchor="w", pady=(0, 4))
+        self.font_slider = ctk.CTkSlider(
+            self.menu_content,
+            from_=0.9,
+            to=1.2,
+            number_of_steps=12,
+            width=140,
+            command=self.change_font_scale,
+        )
+        self.font_slider.set(self.font_scale)
+        self.font_slider.pack(anchor="w")
+
+        self.menu_visible = False
+        self._menu_animation_id = None
 
         # --- ESTILO DA TABELA (modo claro/escuro dinâmico) ---
         self.style.theme_use("default")
@@ -134,9 +213,6 @@ class DataCleanerApp:
         self.standardize_button = ctk.CTkButton(self.button_frame, text="Padronizar Dados", command=self.standardize_data, width=180, fg_color="#f4c27d", hover_color="#efb463", text_color="#382612", **common_button_opts)
         self.standardize_button.grid(row=0, column=3, padx=8, pady=10)
 
-        self.theme_switch = ctk.CTkSwitch(self.button_frame, text="Modo Claro", command=self.toggle_mode, width=120, height=28, border_color="#9bb1d1", fg_color="#d6e4ff")
-        self.theme_switch.grid(row=0, column=4, padx=15, pady=10)
-
 
         # LINHA 1 (5 botões)
    
@@ -159,6 +235,151 @@ class DataCleanerApp:
         self.frame.grid_columnconfigure(0, weight=1)
         self.frame.grid_rowconfigure(0, weight=1)
         self.button_frame.grid_columnconfigure((0, 1, 2, 3, 4), weight=1)
+
+        self._apply_ui_texts()
+        self._apply_font_scale()
+
+    def _translate(self, key):
+        translations = {
+            "pt": {
+                "title": "DataPolisher Studio",
+                "subtitle": "Higienização inteligente de dados",
+                "menu": "Menu",
+                "settings": "Configurações",
+                "theme_light": "Modo claro",
+                "theme_dark": "Modo escuro",
+                "language": "Idioma",
+                "font_size": "Tamanho da fonte",
+                "load_file": "Carregar Arquivo",
+                "remove_duplicates": "Remover Duplicatas",
+                "fill_na": "Preencher Nulos",
+                "standardize": "Padronizar Dados",
+                "filter_column": "Filtrar Coluna",
+                "filter_row": "Filtrar Linha",
+                "undo": "Desfazer",
+                "save": "Salvar",
+                "delete_column": "Excluir Coluna",
+                "cancel": "Cancelar",
+                "apply": "Aplicar",
+                "visualize": "Visualizar",
+                "close": "Fechar",
+            },
+            "en": {
+                "title": "DataPolisher Studio",
+                "subtitle": "Smart data cleaning",
+                "menu": "Menu",
+                "settings": "Settings",
+                "theme_light": "Light mode",
+                "theme_dark": "Dark mode",
+                "language": "Language",
+                "font_size": "Font size",
+                "load_file": "Load File",
+                "remove_duplicates": "Remove Duplicates",
+                "fill_na": "Fill Missing",
+                "standardize": "Standardize Data",
+                "filter_column": "Filter Column",
+                "filter_row": "Filter Row",
+                "undo": "Undo",
+                "save": "Save",
+                "delete_column": "Delete Column",
+                "cancel": "Cancel",
+                "apply": "Apply",
+                "visualize": "View",
+                "close": "Close",
+            },
+        }
+        return translations.get(self.language, translations["pt"]).get(key, key)
+
+    def _font_size(self, base_size):
+        return max(10, round(base_size * self.font_scale, 1))
+
+    def _apply_ui_texts(self):
+        if hasattr(self, "title_label"):
+            self.title_label.configure(text=self._translate("title"))
+        if hasattr(self, "subtitle_label"):
+            self.subtitle_label.configure(text=self._translate("subtitle"))
+        if hasattr(self, "menu_label"):
+            self.menu_label.configure(text=self._translate("menu"))
+        if hasattr(self, "menu_settings_label"):
+            self.menu_settings_label.configure(text=self._translate("settings"))
+        if hasattr(self, "language_label"):
+            self.language_label.configure(text=self._translate("language"))
+        if hasattr(self, "font_label"):
+            self.font_label.configure(text=self._translate("font_size"))
+        if hasattr(self, "theme_switch"):
+            self.theme_switch.configure(text=self._translate("theme_dark" if self.is_dark_mode else "theme_light"))
+
+        if hasattr(self, "load_button"):
+            self.load_button.configure(text=self._translate("load_file"))
+        if hasattr(self, "remove_duplicates_button"):
+            self.remove_duplicates_button.configure(text=self._translate("remove_duplicates"))
+        if hasattr(self, "fill_na_button"):
+            self.fill_na_button.configure(text=self._translate("fill_na"))
+        if hasattr(self, "standardize_button"):
+            self.standardize_button.configure(text=self._translate("standardize"))
+        if hasattr(self, "filter_column_button"):
+            self.filter_column_button.configure(text=self._translate("filter_column"))
+        if hasattr(self, "filter_row_button"):
+            self.filter_row_button.configure(text=self._translate("filter_row"))
+        if hasattr(self, "undo_button"):
+            self.undo_button.configure(text=self._translate("undo"))
+        if hasattr(self, "save_button"):
+            self.save_button.configure(text=self._translate("save"))
+        if hasattr(self, "delete_column_button"):
+            self.delete_column_button.configure(text=self._translate("delete_column"))
+
+        if hasattr(self, "language_var"):
+            self.language_var.set("Português" if self.language == "pt" else "English")
+
+    def _apply_font_scale(self):
+        if hasattr(self, "title_label"):
+            self.title_label.configure(font=ctk.CTkFont(size=int(round(self._font_size(24))), weight="bold"))
+        if hasattr(self, "subtitle_label"):
+            self.subtitle_label.configure(font=ctk.CTkFont(size=int(round(self._font_size(14))), slant="italic"))
+        if hasattr(self, "menu_label"):
+            self.menu_label.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        if hasattr(self, "menu_settings_label"):
+            self.menu_settings_label.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        if hasattr(self, "language_label"):
+            self.language_label.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        if hasattr(self, "font_label"):
+            self.font_label.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        if hasattr(self, "theme_switch"):
+            self.theme_switch.configure(font=ctk.CTkFont(size=int(round(self._font_size(12)))))
+        if hasattr(self, "language_selector"):
+            self.language_selector.configure(font=ctk.CTkFont(size=int(round(self._font_size(11)))))
+
+        if hasattr(self, "load_button"):
+            self.load_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        if hasattr(self, "remove_duplicates_button"):
+            self.remove_duplicates_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        if hasattr(self, "fill_na_button"):
+            self.fill_na_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        if hasattr(self, "standardize_button"):
+            self.standardize_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        if hasattr(self, "filter_column_button"):
+            self.filter_column_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        if hasattr(self, "filter_row_button"):
+            self.filter_row_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        if hasattr(self, "undo_button"):
+            self.undo_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        if hasattr(self, "save_button"):
+            self.save_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        if hasattr(self, "delete_column_button"):
+            self.delete_column_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+
+    def change_language(self, value):
+        if value == "English":
+            self.language = "en"
+        else:
+            self.language = "pt"
+        self._apply_ui_texts()
+        self._apply_font_scale()
+
+    def change_font_scale(self, value):
+        self.font_scale = float(value)
+        self._apply_font_scale()
+
     def _get_theme_colors(self):
         # Esquema de cores dinâmico para manter o app legível em modo claro e escuro.
         if self.is_dark_mode:
@@ -186,6 +407,31 @@ class DataCleanerApp:
     def _apply_theme_colors(self):
         colors = self._get_theme_colors()
         self.root.configure(fg_color=colors["bg"])
+
+        if hasattr(self, "header_frame"):
+            self.header_frame.configure(fg_color="transparent")
+        if hasattr(self, "title_label"):
+            self.title_label.configure(text_color=colors["text"])
+        if hasattr(self, "subtitle_label"):
+            self.subtitle_label.configure(text_color="#64748b" if not self.is_dark_mode else "#c9d7f0")
+        if hasattr(self, "menu_label"):
+            self.menu_label.configure(text_color=colors["text"])
+        if hasattr(self, "menu_settings_label"):
+            self.menu_settings_label.configure(text_color=colors["text"])
+        if hasattr(self, "menu_panel"):
+            self.menu_panel.configure(fg_color=colors["panel"], border_color=colors["border"])
+        if hasattr(self, "menu_button"):
+            self.menu_button.configure(
+                fg_color="#dfeaff" if not self.is_dark_mode else "#243348",
+                text_color="#1b263b" if not self.is_dark_mode else "#edf2ff",
+                hover_color="#cfe0ff" if not self.is_dark_mode else "#2e405e",
+                text="▾" if not self.menu_visible else "▴"
+            )
+        if hasattr(self, "theme_switch"):
+            self.theme_switch.configure(text="Modo escuro" if self.is_dark_mode else "Modo claro")
+            self.theme_switch.configure(fg_color="#d6e4ff" if not self.is_dark_mode else "#2b3a52")
+            self.theme_switch.configure(border_color="#9bb1d1" if not self.is_dark_mode else "#5b7ec2")
+
         if hasattr(self, "frame"):
             self.frame.configure(fg_color=colors["panel"])
         if hasattr(self, "tree"):
@@ -267,16 +513,87 @@ class DataCleanerApp:
         self.tree.xview_moveto(max(0.0, min(1.0, current + delta * 0.04)))
         return "break"
 
+    def _position_menu_panel(self):
+        if not hasattr(self, "menu_group") or not self.menu_group.winfo_ismapped():
+            return
+
+        self.root.update_idletasks()
+        panel_width = max(self.menu_panel.winfo_reqwidth(), 220)
+        root_width = self.root.winfo_width()
+        root_height = self.root.winfo_height()
+
+        base_x = self.menu_group.winfo_rootx() - self.root.winfo_rootx() - 8
+        base_y = self.menu_group.winfo_rooty() - self.root.winfo_rooty() + self.menu_group.winfo_height() + 10
+
+        max_x = max(12, root_width - panel_width - 12)
+        x = min(max(base_x, 12), max_x)
+        y = min(max(base_y, 12), max(12, root_height - 150))
+
+        self.menu_panel.place(x=x, y=y)
+        self.menu_panel.lift()
+
+    def _menu_target_height(self):
+        self.root.update_idletasks()
+        content_height = self.menu_content.winfo_reqheight() if hasattr(self, "menu_content") else 0
+        target_height = max(120, content_height + 28)
+        max_height = max(150, self.root.winfo_height() - 100)
+        return min(target_height, max_height)
+
+    def _animate_menu(self, opening):
+        target_height = self._menu_target_height()
+
+        if opening:
+            current_height = self.menu_panel.winfo_height()
+            next_height = min(current_height + 18, target_height)
+            self.menu_panel.configure(height=next_height)
+            if next_height < target_height:
+                self._menu_animation_id = self.root.after(16, self._animate_menu, True)
+                return
+            self._menu_animation_id = None
+            self._position_menu_panel()
+            return
+
+        current_height = self.menu_panel.winfo_height()
+        next_height = max(current_height - 18, 0)
+        self.menu_panel.configure(height=next_height)
+        if next_height > 0:
+            self._menu_animation_id = self.root.after(16, self._animate_menu, False)
+            return
+
+        self.menu_panel.configure(height=0)
+        self.menu_panel.place_forget()
+        self._menu_animation_id = None
+
+    def toggle_settings_menu(self):
+        self.menu_visible = not self.menu_visible
+        if self.menu_visible:
+            self.root.update_idletasks()
+            self._position_menu_panel()
+            self.menu_panel.configure(height=0)
+            self.menu_panel.lift()
+            self._animate_menu(True)
+        else:
+            if self._menu_animation_id is not None:
+                self.root.after_cancel(self._menu_animation_id)
+                self._menu_animation_id = None
+            self._animate_menu(False)
+        self._apply_theme_colors()
+
     def toggle_mode(self):
         # Alterna o tema visual do app sem mexer na lógica dos dados.
-        if self.theme_switch.get() == 1:
-            ctk.set_appearance_mode("light")
-            self.is_dark_mode = False
-            self.theme_switch.configure(text="Modo Escuro")
+        switch_state = bool(self.theme_switch.get())
+
+        if switch_state == self.is_dark_mode:
+            self.is_dark_mode = not self.is_dark_mode
+            if self.is_dark_mode:
+                self.theme_switch.select()
+            else:
+                self.theme_switch.deselect()
         else:
-            ctk.set_appearance_mode("dark")
-            self.is_dark_mode = True
-            self.theme_switch.configure(text="Modo Claro")
+            self.is_dark_mode = switch_state
+
+        ctk.set_appearance_mode("dark" if self.is_dark_mode else "light")
+        self.theme_switch.configure(text="Modo escuro" if self.is_dark_mode else "Modo claro")
         self._apply_theme_colors()
 
     def aplicar_estilo(self):
