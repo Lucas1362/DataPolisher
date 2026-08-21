@@ -24,7 +24,7 @@ Focado na experiência do usuário (UX), ele permite que cientistas de dados, an
 * **Filtros e Remoções:** Remoção de duplicatas com um clique e isolamento de dados via filtros precisos de linha ou coluna.
 * **Controle de Estado:** Sistema de histórico na memória (Undo) que permite desfazer ações destrutivas acidentais.
 
-### 🎨 Interface e Experiência Premium (UI/UX)
+### Interface e Experiência (UI/UX)
 * **Design Responsivo e Moderno:** Construído sob o `CustomTkinter`, apresentando janelas modais, botões com feedback tátil e cantos arredondados.
 * **Navegação Avançada:** Tabela de dados (Treeview) estilizada com suporte a *Swipe/Arraste Horizontal* nativo no desktop.
 * **Personalização Completa:** 
