@@ -1,4 +1,4 @@
-🧹 DataPolisher 
+ DataPolisher 
 
 ![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)
 ![CustomTkinter](https://img.shields.io/badge/GUI-CustomTkinter-darkblue.svg)
