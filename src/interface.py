@@ -8,6 +8,9 @@ botões de funcionalidade, aplica limpezas e atualiza a tabela visível.
 """
 
 import os
+import sys
+
+from sympy import python
 import cleaner
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, Toplevel
@@ -238,6 +241,8 @@ class DataCleanerApp:
 
         self._apply_ui_texts()
         self._apply_font_scale()
+        
+        self.root.bind("<F5>", self._recarregar_app)
 
     def _translate(self, key):
         translations = {
@@ -472,16 +477,16 @@ class DataCleanerApp:
 
         # Move com sensibilidade reduzida para parecer mais natural
         current_scroll = float(self.tree.xview()[0])
-        target_scroll = current_scroll - (delta_x / max(self.tree.winfo_width(), 1)) * 1.4
+        target_scroll = current_scroll - (delta_x / max(self.tree.winfo_width(), 1)) * 1.0
         target_scroll = max(0.0, min(target_scroll, 1.0))
         self.tree.xview_moveto(target_scroll)
 
         # Inércia baseada no último deslocamento do drag
-        self._horizontal_drag_velocity = (target_scroll - current_scroll) * 1.8
+        self._horizontal_drag_velocity = (target_scroll - current_scroll) * 0.5
 
     def _stop_horizontal_drag(self, event):
         self._horizontal_drag_active = False
-        self._horizontal_drag_velocity *= 0.7
+        self._horizontal_drag_velocity *= 0.25
         if abs(self._horizontal_drag_velocity) < 0.0005:
             self._horizontal_drag_velocity = 0.0
             return
@@ -489,7 +494,7 @@ class DataCleanerApp:
 
     def _animate_horizontal_friction(self):
         if abs(self._horizontal_drag_velocity) < 0.0005:
-            self._horizontal_drag_velocity = 0.0
+            self._horizontal_drag_velocity = 0.5
             self._horizontal_drag_inertia_id = None
             return
 
@@ -497,8 +502,8 @@ class DataCleanerApp:
         next_scroll = current + self._horizontal_drag_velocity
         next_scroll = max(0.0, min(next_scroll, 1.0))
         self.tree.xview_moveto(next_scroll)
-        self._horizontal_drag_velocity *= 0.88
-        self._horizontal_drag_inertia_id = self.root.after(16, self._animate_horizontal_friction)
+        self._horizontal_drag_velocity *= 0.98
+        self._horizontal_drag_inertia_id = self.root.after(7, self._animate_horizontal_friction)
 
     def _on_mouse_wheel_horizontal(self, event):
         try:
@@ -1018,3 +1023,7 @@ class DataCleanerApp:
             messagebox.showinfo("Desfazer", "Última ação desfeita com sucesso!")
         else:
             messagebox.showwarning("Aviso", "Não há nenhuma ação para desfazer.")
+    def _recarregar_app(self, event=None):
+  
+        python = sys.executable
+        os.execv(python, [python] + sys.argv)
