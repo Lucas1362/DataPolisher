@@ -5,6 +5,7 @@ ponto de entrada do sistema e não guarda regras de negócio.
 """
 
 import customtkinter as ctk
+from tkinterdnd2 import TkinterDnD
 from interface import DataCleanerApp
 
 if __name__ == "__main__":
@@ -13,8 +14,8 @@ if __name__ == "__main__":
     ctk.set_appearance_mode("Light")  # Modos: "System", "Dark", "Light"
     ctk.set_default_color_theme("blue")  # Temas: "blue", "green", "dark-blue"
 
-    # Cria a janela principal do app em CustomTkinter.
-    root = ctk.CTk()
+    # Cria a janela principal do app com suporte ao drag-and-drop.
+    root = TkinterDnD.Tk()
     root.geometry("1920x1080")  # Define o tamanho inicial da janela
     root.attributes("-alpha", 0.85)  # Efeito de vidro sutil na janela
 

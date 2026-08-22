@@ -9,14 +9,17 @@ botões de funcionalidade, aplica limpezas e atualiza a tabela visível.
 
 import os
 import sys
-
-from sympy import python
 import cleaner
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, Toplevel
 from tkinter import ttk
 import pandas as pd
 import customtkinter as ctk
+
+try:
+    from tkinterdnd2 import DND_FILES
+except ImportError:  # pragma: no cover
+    DND_FILES = None
 
 class DataCleanerApp:
 
@@ -36,7 +39,10 @@ class DataCleanerApp:
        
         self.root = root
         self.root.title("DataPolisher - Limpeza de Dados")
-        self.root.configure(fg_color="#edf4ff")
+        try:
+            self.root.configure(fg_color="#edf4ff")
+        except Exception:
+            self.root.configure(bg="#edf4ff")
         self.root.minsize(980, 700)
         self.data = None
         self.data_history = []
@@ -152,10 +158,38 @@ class DataCleanerApp:
         # --- FRAME DA TABELA ---
         # Área central de visualização dos dados. É aqui que a tabela fica
         # exposta ao usuário, com scroll vertical e interações de navegação.
-   
-   
+
         self.frame = ctk.CTkFrame(self.root, corner_radius=18, fg_color="#f9fbff", border_color="#dfeaff", border_width=1)
         self.frame.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
+
+        self._drop_zone_active = False
+        self.drop_hint = ctk.CTkLabel(
+            self.frame,
+            text="Arraste um arquivo aqui",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color="#5b7bd6",
+            fg_color="#edf4ff",
+            corner_radius=12,
+            border_width=1,
+            border_color="#c6d7ff",
+            width=220,
+            height=30,
+        )
+        self.show_drop_hint_if_needed()
+
+        self.toast = ctk.CTkLabel(
+            self.root,
+            text="",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color="#1f9d61",
+            text_color="white",
+            corner_radius=12,
+            border_width=0,
+            width=260,
+            height=36,
+        )
+        self.toast.place_forget()
+        self.toast_timer = None
 
         self.tree = ttk.Treeview(self.frame)
         self.tree.grid(row=0, column=0, sticky='nsew', padx=10, pady=10)
@@ -163,6 +197,8 @@ class DataCleanerApp:
         self.scrollbar_y = ctk.CTkScrollbar(self.frame, orientation="vertical", command=self.tree.yview)
         self.scrollbar_y.grid(row=0, column=1, sticky='ns', pady=10)
 
+        self.frame.grid_columnconfigure(0, weight=1)
+        self.frame.grid_rowconfigure(0, weight=1)
         self.tree.configure(yscrollcommand=self.scrollbar_y.set)
         self._apply_theme_colors()
 
@@ -185,6 +221,8 @@ class DataCleanerApp:
         self.tree.bind("<MouseWheel>", self._on_mouse_wheel_horizontal)
         self.tree.bind("<Shift-MouseWheel>", self._on_mouse_wheel_horizontal)
 
+        self._setup_drag_and_drop()
+
         # --- FRAME DOS BOTÕES ---
         # Organização principal do esquema de botões do app.
         # Este bloco reúne as ações principais para limpeza, filtro,
@@ -203,35 +241,44 @@ class DataCleanerApp:
             "border_width": 0,
         }
 
+        primary_fg = "#C9A227" if self.is_dark_mode else "#A77B16"
+        primary_text = "#0B0B0B" if self.is_dark_mode else "#FFFFFF"
+        primary_hover = "#E0B83A" if self.is_dark_mode else "#8F6812"
+        primary_press = "#A9841F" if self.is_dark_mode else "#76550E"
+        secondary_fg = "#1A1A1A" if self.is_dark_mode else "#FFFFFF"
+        secondary_text = "#E5C45A" if self.is_dark_mode else "#80600F"
+        secondary_border = "#5C4815" if self.is_dark_mode else "#C9B477"
+        secondary_hover = "#242424" if self.is_dark_mode else "#F5F0E2"
+        destructive_fg = "#B42318"
+        destructive_hover = "#D92D20"
+
         # LINHA 0 (4 botões)
-        self.load_button = ctk.CTkButton(self.button_frame, text="Carregar Arquivo", command=self.load_file, width=160, fg_color="#7aa7ff", hover_color="#5c8ef5", text_color="#0d1b2a", **common_button_opts)
+        self.load_button = ctk.CTkButton(self.button_frame, text="Carregar Arquivo", command=self.load_file, width=160, fg_color=primary_fg, hover_color=primary_hover, text_color=primary_text, border_color=primary_fg, **common_button_opts)
         self.load_button.grid(row=0, column=0, padx=8, pady=10)
 
-        self.remove_duplicates_button = ctk.CTkButton(self.button_frame, text="Remover Duplicatas", command=self.remove_duplicates, width=160, fg_color="#b99cff", hover_color="#a889ff", text_color="#1f1638", **common_button_opts)
+        self.remove_duplicates_button = ctk.CTkButton(self.button_frame, text="Remover Duplicatas", command=self.remove_duplicates, width=160, fg_color=secondary_fg, hover_color=secondary_hover, text_color=secondary_text, border_color=secondary_border, **common_button_opts)
         self.remove_duplicates_button.grid(row=0, column=1, padx=8, pady=10)
 
-        self.fill_na_button = ctk.CTkButton(self.button_frame, text="Preencher Nulos", command=self.fill_na, width=160, fg_color="#7ad7d0", hover_color="#62c8c0", text_color="#0d2c2c", **common_button_opts)
+        self.fill_na_button = ctk.CTkButton(self.button_frame, text="Preencher Nulos", command=self.fill_na, width=160, fg_color=secondary_fg, hover_color=secondary_hover, text_color=secondary_text, border_color=secondary_border, **common_button_opts)
         self.fill_na_button.grid(row=0, column=2, padx=8, pady=10)
 
-        self.standardize_button = ctk.CTkButton(self.button_frame, text="Padronizar Dados", command=self.standardize_data, width=180, fg_color="#f4c27d", hover_color="#efb463", text_color="#382612", **common_button_opts)
+        self.standardize_button = ctk.CTkButton(self.button_frame, text="Padronizar Dados", command=self.standardize_data, width=180, fg_color=primary_fg, hover_color=primary_hover, text_color=primary_text, border_color=primary_fg, **common_button_opts)
         self.standardize_button.grid(row=0, column=3, padx=8, pady=10)
 
-
         # LINHA 1 (5 botões)
-   
-        self.filter_column_button = ctk.CTkButton(self.button_frame, text="Filtrar Coluna", command=self.filter_column, width=140, fg_color="#8ab6ff", hover_color="#72a5ff", text_color="#0d1b2a", **common_button_opts)
+        self.filter_column_button = ctk.CTkButton(self.button_frame, text="Filtrar Coluna", command=self.filter_column, width=140, fg_color=secondary_fg, hover_color=secondary_hover, text_color=secondary_text, border_color=secondary_border, **common_button_opts)
         self.filter_column_button.grid(row=1, column=0, padx=6, pady=10)
 
-        self.filter_row_button = ctk.CTkButton(self.button_frame, text="Filtrar Linha", command=self.filter_row, width=140, fg_color="#8ab6ff", hover_color="#72a5ff", text_color="#0d1b2a", **common_button_opts)
+        self.filter_row_button = ctk.CTkButton(self.button_frame, text="Filtrar Linha", command=self.filter_row, width=140, fg_color=secondary_fg, hover_color=secondary_hover, text_color=secondary_text, border_color=secondary_border, **common_button_opts)
         self.filter_row_button.grid(row=1, column=1, padx=6, pady=10)
 
-        self.undo_button = ctk.CTkButton(self.button_frame, text="Desfazer", command=self.undo_action, width=140, fg_color="#8ab6ff", hover_color="#72a5ff", text_color="#0d1b2a", **common_button_opts)
+        self.undo_button = ctk.CTkButton(self.button_frame, text="Desfazer", command=self.undo_action, width=140, fg_color=secondary_fg, hover_color=secondary_hover, text_color=secondary_text, border_color=secondary_border, **common_button_opts)
         self.undo_button.grid(row=1, column=2, padx=6, pady=10)
 
-        self.save_button = ctk.CTkButton(self.button_frame, text="Salvar", command=self.save_file, width=140, fg_color="#7bd6a1", hover_color="#63c78f", text_color="#103022", **common_button_opts)
+        self.save_button = ctk.CTkButton(self.button_frame, text="Salvar", command=self.save_file, width=140, fg_color=primary_fg, hover_color=primary_hover, text_color=primary_text, border_color=primary_fg, **common_button_opts)
         self.save_button.grid(row=1, column=3, padx=6, pady=10)
 
-        self.delete_column_button = ctk.CTkButton(self.button_frame, text="Excluir Coluna", command=self.delete_column, width=140, fg_color="#f3a6a6", hover_color="#ee8f8f", text_color="#3c1d1d", **common_button_opts)
+        self.delete_column_button = ctk.CTkButton(self.button_frame, text="Excluir Coluna", command=self.delete_column, width=140, fg_color=destructive_fg, hover_color=destructive_hover, text_color="#FFFFFF", border_color=destructive_fg, **common_button_opts)
         self.delete_column_button.grid(row=1, column=4, padx=6, pady=10)
 
         # Ajuste de expansão
@@ -386,59 +433,136 @@ class DataCleanerApp:
         self._apply_font_scale()
 
     def _get_theme_colors(self):
-        # Esquema de cores dinâmico para manter o app legível em modo claro e escuro.
+        # Esquema premium com dourado, preto e tons quentes de joalheria.
         if self.is_dark_mode:
             return {
-                "bg": "#111827",
-                "panel": "#1d2433",
-                "table_bg": "#202a3a",
-                "heading": "#2c374d",
-                "heading_active": "#3a4968",
-                "text": "#edf2ff",
-                "selected": "#7aa7ff",
-                "border": "#394c72",
+                "bg": "#090909",
+                "panel": "#121212",
+                "surface": "#1A1A1A",
+                "surface_alt": "#212121",
+                "table_bg": "#1B1B1B",
+                "heading": "#1C1C1C",
+                "heading_active": "#2B2B2B",
+                "text": "#F5F3EE",
+                "secondary_text": "#B8B2A8",
+                "selected": "#C9A227",
+                "accent": "#C9A227",
+                "accent_soft": "#E5C45A",
+                "accent_deep": "#8F6C17",
+                "border": "#3B311C",
+                "shadow": "#050505",
             }
         return {
-            "bg": "#edf4ff",
-            "panel": "#f8fbff",
-            "table_bg": "#ffffff",
-            "heading": "#e2ebff",
-            "heading_active": "#d4e1ff",
-            "text": "#1b263b",
-            "selected": "#b8d1ff",
-            "border": "#dfeaff",
+            "bg": "#F5F3EE",
+            "panel": "#FFFDFB",
+            "surface": "#F9F5F0",
+            "surface_alt": "#F0E9DF",
+            "table_bg": "#FFFFFF",
+            "heading": "#F0E7D5",
+            "heading_active": "#E2D4B1",
+            "text": "#171717",
+            "secondary_text": "#5F5A52",
+            "selected": "#C49A32",
+            "accent": "#A77B16",
+            "accent_soft": "#D8B45B",
+            "accent_deep": "#77570F",
+            "border": "#D9C89A",
+            "shadow": "#D9C7A3",
         }
 
     def _apply_theme_colors(self):
         colors = self._get_theme_colors()
-        self.root.configure(fg_color=colors["bg"])
+        try:
+            self.root.configure(fg_color=colors["bg"])
+        except Exception:
+            self.root.configure(bg=colors["bg"])
 
         if hasattr(self, "header_frame"):
             self.header_frame.configure(fg_color="transparent")
         if hasattr(self, "title_label"):
             self.title_label.configure(text_color=colors["text"])
         if hasattr(self, "subtitle_label"):
-            self.subtitle_label.configure(text_color="#64748b" if not self.is_dark_mode else "#c9d7f0")
+            self.subtitle_label.configure(text_color=colors["secondary_text"])
         if hasattr(self, "menu_label"):
             self.menu_label.configure(text_color=colors["text"])
         if hasattr(self, "menu_settings_label"):
             self.menu_settings_label.configure(text_color=colors["text"])
         if hasattr(self, "menu_panel"):
-            self.menu_panel.configure(fg_color=colors["panel"], border_color=colors["border"])
+            self.menu_panel.configure(
+                fg_color=colors["panel"],
+                border_color=colors["accent"],
+                corner_radius=16,
+            )
         if hasattr(self, "menu_button"):
             self.menu_button.configure(
-                fg_color="#dfeaff" if not self.is_dark_mode else "#243348",
-                text_color="#1b263b" if not self.is_dark_mode else "#edf2ff",
-                hover_color="#cfe0ff" if not self.is_dark_mode else "#2e405e",
+                fg_color=colors["accent"],
+                text_color="#F5F3EE" if self.is_dark_mode else "#FFF9F0",
+                hover_color=colors["accent_soft"],
                 text="▾" if not self.menu_visible else "▴"
             )
         if hasattr(self, "theme_switch"):
             self.theme_switch.configure(text="Modo escuro" if self.is_dark_mode else "Modo claro")
-            self.theme_switch.configure(fg_color="#d6e4ff" if not self.is_dark_mode else "#2b3a52")
-            self.theme_switch.configure(border_color="#9bb1d1" if not self.is_dark_mode else "#5b7ec2")
+            self.theme_switch.configure(fg_color=colors["surface"], border_color=colors["accent"])
 
         if hasattr(self, "frame"):
-            self.frame.configure(fg_color=colors["panel"])
+            self.frame.configure(
+                fg_color=colors["panel"],
+                border_color=colors["border"],
+                corner_radius=18,
+                border_width=2,
+            )
+
+        # Estilo premium para os botões da interface.
+        primary_fg = colors["accent"]
+        primary_text = "#0B0B0B" if self.is_dark_mode else "#FFF9F0"
+        primary_hover = colors["accent_soft"]
+        secondary_fg = colors["surface"]
+        secondary_text = colors["accent"]
+        secondary_hover = colors["surface_alt"]
+        secondary_border = colors["border"]
+        destructive_fg = "#B42318"
+        destructive_hover = "#D92D20"
+
+        for button_name, variant in {
+            "load_button": "primary",
+            "remove_duplicates_button": "secondary",
+            "fill_na_button": "secondary",
+            "standardize_button": "primary",
+            "filter_column_button": "secondary",
+            "filter_row_button": "secondary",
+            "undo_button": "secondary",
+            "save_button": "primary",
+            "delete_column_button": "danger",
+        }.items():
+            if not hasattr(self, button_name):
+                continue
+            btn = getattr(self, button_name)
+            if variant == "primary":
+                btn.configure(
+                    fg_color=primary_fg,
+                    hover_color=primary_hover,
+                    text_color=primary_text,
+                    border_color=colors["accent_deep"],
+                    border_width=1,
+                )
+            elif variant == "secondary":
+                btn.configure(
+                    fg_color=secondary_fg,
+                    hover_color=secondary_hover,
+                    text_color=secondary_text,
+                    border_color=secondary_border,
+                    border_width=1,
+                )
+            else:
+                btn.configure(
+                    fg_color=destructive_fg,
+                    hover_color=destructive_hover,
+                    text_color="#FFFFFF",
+                    border_color=destructive_fg,
+                    border_width=1,
+                )
+
+        self._apply_drop_zone_visual()
         if hasattr(self, "tree"):
             self.style.configure("Treeview",
                                 background=colors["table_bg"],
@@ -486,7 +610,7 @@ class DataCleanerApp:
 
     def _stop_horizontal_drag(self, event):
         self._horizontal_drag_active = False
-        self._horizontal_drag_velocity *= 0.25
+        self._horizontal_drag_velocity *= 0.50
         if abs(self._horizontal_drag_velocity) < 0.0005:
             self._horizontal_drag_velocity = 0.0
             return
@@ -494,7 +618,7 @@ class DataCleanerApp:
 
     def _animate_horizontal_friction(self):
         if abs(self._horizontal_drag_velocity) < 0.0005:
-            self._horizontal_drag_velocity = 0.5
+            self._horizontal_drag_velocity = 0.9
             self._horizontal_drag_inertia_id = None
             return
 
@@ -605,6 +729,147 @@ class DataCleanerApp:
         # Aplica o estilo completo
         aplicar_estilo(self.root, self.is_dark_mode)
 
+    def _setup_drag_and_drop(self):
+        target_widget = getattr(self, "frame", None)
+        if DND_FILES is None or target_widget is None or not hasattr(target_widget, "drop_target_register"):
+            return
+
+        try:
+            target_widget.drop_target_register(DND_FILES)
+            target_widget.dnd_bind("<<DropEnter>>", self.on_drag_enter)
+            target_widget.dnd_bind("<<DropLeave>>", self.on_drag_leave)
+            target_widget.dnd_bind("<<Drop>>", self.on_drop_files)
+        except Exception:
+            pass
+
+    def on_drag_enter(self, event):
+        self._drop_zone_active = True
+        self._apply_drop_zone_visual()
+
+    def on_drag_leave(self, event):
+        self._drop_zone_active = False
+        self._apply_drop_zone_visual()
+
+    def hide_drop_hint(self):
+        if hasattr(self, "drop_hint"):
+            self.drop_hint.place_forget()
+
+    def show_drop_hint_if_needed(self):
+        if self.data is None and hasattr(self, "drop_hint"):
+            colors = self._get_theme_colors()
+            self.drop_hint.configure(
+                fg_color=colors["surface_alt"],
+                border_color=colors["accent"],
+                text_color=colors["accent"],
+            )
+            self.drop_hint.configure(text="Arraste um arquivo aqui")
+            self.drop_hint.place(relx=0.5, rely=0.5, anchor="center")
+            self.drop_hint.lift()
+        else:
+            self.hide_drop_hint()
+
+    def _apply_drop_zone_visual(self):
+        if not hasattr(self, "drop_hint"):
+            return
+
+        colors = self._get_theme_colors()
+
+        if self._drop_zone_active:
+            self.hide_drop_hint()
+            if hasattr(self, "frame"):
+                self.frame.configure(border_color=colors["accent_soft"], border_width=3)
+        else:
+            if self.data is None:
+                self.drop_hint.configure(
+                    fg_color=colors["surface_alt"],
+                    border_color=colors["accent"],
+                    text_color=colors["accent"],
+                )
+                self.drop_hint.configure(text="Arraste um arquivo aqui")
+                self.drop_hint.place(relx=0.5, rely=0.5, anchor="center")
+                self.drop_hint.lift()
+            else:
+                self.hide_drop_hint()
+            if hasattr(self, "frame"):
+                self.frame.configure(border_color=colors["border"], border_width=2)
+
+    def parse_dropped_files(self, data):
+        if not data:
+            return []
+
+        if isinstance(data, (list, tuple)):
+            return [str(item).strip() for item in data if str(item).strip()]
+
+        file_text = str(data).strip()
+        if not file_text:
+            return []
+
+        if file_text.startswith("{") and file_text.endswith("}"):
+            file_text = file_text[1:-1]
+
+        if hasattr(self.root, "tk") and hasattr(self.root.tk, "splitlist"):
+            parsed = self.root.tk.splitlist(file_text)
+            return [str(item).strip() for item in parsed if str(item).strip()]
+
+        return [part.strip() for part in file_text.split() if part.strip()]
+
+    def on_drop_files(self, event):
+        self._drop_zone_active = False
+        self.hide_drop_hint()
+        self._apply_drop_zone_visual()
+
+        files = self.parse_dropped_files(event.data)
+        if not files:
+            return
+
+        for file_path in files:
+            if self.load_file_from_path(file_path):
+                break
+
+    def hide_drop_hint(self):
+        if hasattr(self, "drop_hint"):
+            self.drop_hint.place_forget()
+
+    def load_file_from_path(self, file_path):
+        if not file_path:
+            return False
+
+        self._drop_zone_active = False
+        self.hide_drop_hint()
+        self._apply_drop_zone_visual()
+
+        file_path = os.path.abspath(os.path.expanduser(file_path))
+
+        if not os.path.exists(file_path):
+            messagebox.showerror("Erro", f"Arquivo não encontrado: {file_path}")
+            return False
+
+        try:
+            if file_path.endswith('.csv'):
+                self.data = pd.read_csv(file_path)
+            elif file_path.endswith(('.xlsx', '.xls')):
+                self.data = pd.read_excel(file_path)
+            elif file_path.endswith('.ods'):
+                self.data = pd.read_excel(file_path, engine="odf")
+            elif file_path.endswith('.json'):
+                self.data = pd.read_json(file_path)
+            elif file_path.endswith('.pdf'):
+                messagebox.showwarning("Aviso", "Ainda não suportamos leitura de PDF. Escolha Excel ou CSV.")
+                return False
+            else:
+                messagebox.showerror("Erro", "Formato de arquivo não suportado.")
+                return False
+
+            if hasattr(self, 'data_history'):
+                self.data_history = []
+
+            self.show_data()
+            self.show_toast(f"Arquivo carregado: {self.data.shape[0]} linhas e {self.data.shape[1]} colunas.")
+            return True
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao carregar o arquivo: {e}")
+            return False
+
     # Funcionalidade de carregamento de dados.
     # Aceita CSV, Excel, ODS e JSON, e depois prepara o DataFrame para
     # as ações de limpeza e visualização na tabela.
@@ -618,35 +883,32 @@ class DataCleanerApp:
             ("JSON", "*.json"),
             ("Todos os arquivos", "*.*")
         ]
-        
+
         file_path = filedialog.askopenfilename(filetypes=tipos_de_arquivos)
-        
         if file_path:
-            try:
-                # 2. Verifica a extensão para escolher o método certo do Pandas
-                if file_path.endswith('.csv'):
-                    self.data = pd.read_csv(file_path)
-                elif file_path.endswith(('.xlsx', '.xls')):
-                    self.data = pd.read_excel(file_path)
-                elif file_path.endswith('.ods'):
-                    self.data = pd.read_excel(file_path, engine="odf") # LibreOffice
-                elif file_path.endswith('.json'):
-                    self.data = pd.read_json(file_path)
-                elif file_path.endswith('.pdf'):
-                    messagebox.showwarning("Aviso", "Ainda não suportamos leitura de PDF. Escolha Excel ou CSV.")
-                    return
-                else:
-                    messagebox.showerror("Erro", "Formato de arquivo não suportado.")
-                    return
+            self.load_file_from_path(file_path)
 
-                # Limpa o histórico de ações ao carregar um arquivo novo (se você já adicionou o desfazer)
-                if hasattr(self, 'data_history'):
-                    self.data_history = [] 
+    def show_toast(self, message, color=None, duration=1800):
+        if not hasattr(self, "toast"):
+            return
 
-                self.show_data()
-                messagebox.showinfo("Sucesso", f"Arquivo carregado com sucesso!\n{self.data.shape[0]} linhas e {self.data.shape[1]} colunas.")
-            except Exception as e:
-                messagebox.showerror("Erro", f"Erro ao carregar o arquivo: {e}")
+        if color is None:
+            color = self._get_theme_colors()["accent"]
+
+        self.toast.configure(text=message, fg_color=color)
+        self.toast.place(relx=0.5, rely=0.94, anchor="center")
+        self.toast.lift()
+
+        if self.toast_timer is not None:
+            self.root.after_cancel(self.toast_timer)
+
+        self.toast_timer = self.root.after(duration, self.hide_toast)
+
+    def hide_toast(self):
+        if hasattr(self, "toast"):
+            self.toast.place_forget()
+        self.toast_timer = None
+
     def show_data(self):
         # Atualiza a interface com o estado atual do DataFrame.
         # Esse bloco é o ponto central de sincronização entre dados e tabela.
@@ -662,7 +924,10 @@ class DataCleanerApp:
 
             for index, row in self.data.iterrows():
                 self.tree.insert("", "end", values=list(row))
+
+            self.show_drop_hint_if_needed()
         else:
+            self.show_drop_hint_if_needed()
             messagebox.showwarning("Aviso", "Não há dados para mostrar.")
 
     # Funcionalidade de preenchimento de nulos.

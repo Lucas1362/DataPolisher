@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import pandas as pd
 import tkinter as tk
 import customtkinter as ctk
+from tkinterdnd2 import TkinterDnD
 
 import cleaner
 from interface import DataCleanerApp
@@ -59,5 +60,25 @@ class StandardizeTestCase(unittest.TestCase):
         self.assertEqual(app.language, "en")
         self.assertEqual(app.load_button.cget("text"), "Load File")
         self.assertEqual(app.theme_switch.cget("text"), "Light mode")
+
+        root.destroy()
+
+    def test_parse_dropped_files_handles_tkinterdnd_format(self):
+        root = ctk.CTk()
+        root.withdraw()
+        app = DataCleanerApp(root)
+
+        parsed = app.parse_dropped_files('{"/tmp/arquivo.csv" "C:/dados/arquivo.xlsx"}')
+
+        self.assertEqual(parsed, ["/tmp/arquivo.csv", "C:/dados/arquivo.xlsx"])
+
+        root.destroy()
+
+    def test_app_initializes_with_tkinterdnd_root(self):
+        root = TkinterDnD.Tk()
+        root.withdraw()
+        app = DataCleanerApp(root)
+
+        self.assertTrue(hasattr(app, "frame"))
 
         root.destroy()
