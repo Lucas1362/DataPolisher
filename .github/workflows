@@ -1,0 +1,35 @@
+name: Gerar EXE para Windows
+
+
+on:
+  push:
+    branches: [ "main" ] 
+
+jobs:
+  build:
+    runs-on: windows-latest # Pede uma máquina Windows emprestada
+
+    steps:
+    - name: Pegar o código do repositório
+      uses: actions/checkout@v4
+
+    - name: Instalar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11' # Versão super estável
+
+    - name: Instalar as Bibliotecas
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Empacotar o Executável
+      run: |
+        pyinstaller --noconsole --onefile --collect-all customtkinter --collect-all tkinterdnd2 --name "DataPolisher" src/main.py
+
+    - name: Salvar o EXE gerado
+      uses: actions/upload-artifact@v4
+      with:
+        name: DataPolisher-Windows
+        path: dist/DataPolisher.exe
