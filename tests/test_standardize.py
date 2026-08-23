@@ -82,3 +82,45 @@ class StandardizeTestCase(unittest.TestCase):
         self.assertTrue(hasattr(app, "frame"))
 
         root.destroy()
+
+    def test_table_wheel_scroll_stays_vertical_only(self):
+        root = ctk.CTk()
+        root.withdraw()
+        app = DataCleanerApp(root)
+
+        self.assertEqual(app.tree.bind("<MouseWheel>"), "")
+        self.assertEqual(app.tree.bind("<Shift-MouseWheel>"), "")
+        self.assertNotEqual(app.tree.bind("<ButtonPress-3>"), "")
+
+        root.destroy()
+
+    def test_divider_toggle_and_numeric_centering_rules(self):
+        root = ctk.CTk()
+        root.withdraw()
+        app = DataCleanerApp(root)
+
+        app.toggle_table_dividers()
+        self.assertFalse(app.table_divider_enabled)
+
+        self.assertTrue(app._should_center_numeric_column("valor_total"))
+        self.assertTrue(app._should_center_numeric_column("numero_pedido"))
+        self.assertTrue(app._should_center_numeric_column("pedido"))
+        self.assertFalse(app._should_center_numeric_column("cpf"))
+        self.assertFalse(app._should_center_numeric_column("cnpj"))
+
+        root.destroy()
+
+    def test_dark_mode_uses_deep_gray_palette(self):
+        root = ctk.CTk()
+        root.withdraw()
+        app = DataCleanerApp(root)
+
+        app.toggle_mode()
+        colors = app._get_theme_colors()
+
+        self.assertEqual(colors["bg"], "#161616")
+        self.assertEqual(colors["panel"], "#1C1C1C")
+        self.assertEqual(colors["surface"], "#2B2B2B")
+        self.assertEqual(colors["surface_alt"], "#333333")
+
+        root.destroy()
