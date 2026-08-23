@@ -3,7 +3,7 @@ Este módulo inicializa a janela principal, define a aparência global do
 aplicativo e instancia a classe principal da interface. Ele serve como
 ponto de entrada do sistema e não guarda regras de negócio.
 """
-
+import sys
 import customtkinter as ctk
 from tkinterdnd2 import TkinterDnD
 from interface import DataCleanerApp
