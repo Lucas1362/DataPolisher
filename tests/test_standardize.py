@@ -83,14 +83,46 @@ class StandardizeTestCase(unittest.TestCase):
 
         root.destroy()
 
-    def test_table_wheel_scroll_stays_vertical_only(self):
+    def test_table_wheel_scroll_is_vertical_and_horizontal_drag_stays_right_button(self):
         root = ctk.CTk()
         root.withdraw()
         app = DataCleanerApp(root)
 
-        self.assertEqual(app.tree.bind("<MouseWheel>"), "")
+        self.assertNotEqual(app.tree.bind("<MouseWheel>"), "")
+        self.assertNotEqual(app.tree.bind("<Button-4>"), "")
+        self.assertNotEqual(app.tree.bind("<Button-5>"), "")
+        self.assertNotEqual(app.root.bind("<MouseWheel>"), "")
+        self.assertNotEqual(app.root.bind("<Button-4>"), "")
+        self.assertNotEqual(app.root.bind("<Button-5>"), "")
         self.assertEqual(app.tree.bind("<Shift-MouseWheel>"), "")
         self.assertNotEqual(app.tree.bind("<ButtonPress-3>"), "")
+
+        root.destroy()
+
+    def test_right_drag_moves_table_on_both_axes(self):
+        root = ctk.CTk()
+        root.withdraw()
+        app = DataCleanerApp(root)
+        app.data = pd.DataFrame({
+            **{f"col_{i}": [j + i for j in range(30)] for i in range(1, 9)},
+        })
+        app.show_data()
+        app.root.update_idletasks()
+
+        for column in app.tree["columns"]:
+            app.tree.column(column, width=500, minwidth=120, stretch=False)
+
+        app._horizontal_drag_active = True
+        app._horizontal_drag_last_x = 100
+        app._horizontal_drag_last_y = 80
+        app.tree.xview_moveto(0.5)
+        app.tree.yview_moveto(0.5)
+
+        event = type("DummyEvent", (), {"x": 180, "y": 160})()
+        app._move_horizontal_drag(event)
+
+        self.assertGreater(float(app.tree.xview()[0]), 0.0)
+        self.assertGreater(float(app.tree.yview()[0]), 0.0)
 
         root.destroy()
 
@@ -122,5 +154,48 @@ class StandardizeTestCase(unittest.TestCase):
         self.assertEqual(colors["panel"], "#1C1C1C")
         self.assertEqual(colors["surface"], "#2B2B2B")
         self.assertEqual(colors["surface_alt"], "#333333")
+
+        root.destroy()
+
+    def test_toolbar_uses_single_row_and_resizes_with_font_scale(self):
+        root = ctk.CTk()
+        root.withdraw()
+        app = DataCleanerApp(root)
+
+        rows = [
+            app.load_button.grid_info().get("row", 0),
+            app.remove_duplicates_button.grid_info().get("row", 0),
+            app.fill_na_button.grid_info().get("row", 0),
+            app.standardize_button.grid_info().get("row", 0),
+            app.filter_column_button.grid_info().get("row", 0),
+            app.filter_row_button.grid_info().get("row", 0),
+            app.undo_button.grid_info().get("row", 0),
+            app.save_button.grid_info().get("row", 0),
+            app.delete_column_button.grid_info().get("row", 0),
+        ]
+
+        self.assertTrue(all(row == 0 for row in rows))
+
+        before_height = app.load_button.cget("height")
+        app.font_scale = 1.2
+        app._apply_font_scale()
+        self.assertGreater(app.load_button.cget("height"), before_height)
+
+        root.destroy()
+
+    def test_dividers_follow_column_boundaries(self):
+        root = ctk.CTk()
+        root.withdraw()
+        app = DataCleanerApp(root)
+        app.data = pd.DataFrame({
+            "col_a": [1, 2],
+            "col_b": [3, 4],
+            "col_c": [5, 6],
+        })
+        app.show_data()
+        app.root.update_idletasks()
+
+        self.assertEqual(len(app._table_divider_lines), 0)
+        self.assertFalse(app.table_divider_enabled)
 
         root.destroy()

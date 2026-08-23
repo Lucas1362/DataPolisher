@@ -49,7 +49,7 @@ class DataCleanerApp:
         self.is_dark_mode = False
         self.language = "pt"
         self.font_scale = 1.0
-        self.table_divider_enabled = True
+        self.table_divider_enabled = False
         self.center_numeric_values = True
         self.style = ttk.Style()
         
@@ -151,18 +151,6 @@ class DataCleanerApp:
         self.table_settings_label = ctk.CTkLabel(self.menu_content, text="Tabela", font=ctk.CTkFont(size=12, weight="bold"))
         self.table_settings_label.pack(anchor="w", pady=(10, 4))
 
-        self.divider_switch = ctk.CTkSwitch(
-            self.menu_content,
-            text="Divisórias da tabela",
-            command=lambda: self.toggle_table_dividers(force_state=self.divider_switch.get()),
-            width=140,
-            height=28,
-            border_color="#9bb1d1",
-            fg_color="#d6e4ff",
-        )
-        self.divider_switch.select() if self.table_divider_enabled else self.divider_switch.deselect()
-        self.divider_switch.pack(anchor="w", pady=(0, 8))
-
         self.menu_visible = False
         self._menu_animation_id = None
 
@@ -172,12 +160,17 @@ class DataCleanerApp:
 
         # ----------------------------------------------------
 
-        # --- FRAME DA TABELA ---
-        # Área central de visualização dos dados. É aqui que a tabela fica
-        # exposta ao usuário, com scroll vertical e interações de navegação.
+        # --- BARRA DE FERRAMENTAS ---
+        # Mantém os controles em uma faixa compacta acima da tabela, com
+        # visual mais parecido com editores de texto e planilhas profissionais.
+        self.toolbar_frame = ctk.CTkFrame(self.root, fg_color="transparent")
+        self.toolbar_frame.pack(fill=tk.X, padx=20, pady=(0, 8))
+
+        self.button_frame = ctk.CTkFrame(self.toolbar_frame, fg_color="transparent")
+        self.button_frame.pack(fill=tk.X)
 
         self.frame = ctk.CTkFrame(self.root, corner_radius=18, fg_color="#f9fbff", border_color="#dfeaff", border_width=1)
-        self.frame.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
+        self.frame.pack(pady=(0, 10), padx=20, fill=tk.BOTH, expand=True)
 
         self._drop_zone_active = False
         self.drop_hint = ctk.CTkLabel(
@@ -224,8 +217,13 @@ class DataCleanerApp:
         self._horizontal_drag_start_x = 0
         self._horizontal_drag_start_scroll = 0.0
         self._horizontal_drag_velocity = 0.0
+        self._vertical_drag_velocity = 0.0
         self._horizontal_drag_last_x = 0
+        self._horizontal_drag_last_y = 0
         self._horizontal_drag_inertia_id = None
+        self._drag_sensitivity = 1.0
+        self._drag_vertical_sensitivity = 0.6
+        self._drag_friction = 0.98
         self.tree.bind("<Shift-ButtonPress-1>", self._start_horizontal_drag)
         self.tree.bind("<Shift-B1-Motion>", self._move_horizontal_drag)
         self.tree.bind("<Shift-ButtonRelease-1>", self._stop_horizontal_drag)
@@ -235,23 +233,22 @@ class DataCleanerApp:
         self.tree.bind("<ButtonPress-3>", self._start_horizontal_drag)
         self.tree.bind("<B3-Motion>", self._move_horizontal_drag)
         self.tree.bind("<ButtonRelease-3>", self._stop_horizontal_drag)
+        self.tree.bind("<MouseWheel>", self._on_mouse_wheel)
+        self.tree.bind("<Button-4>", self._on_mouse_wheel)
+        self.tree.bind("<Button-5>", self._on_mouse_wheel)
+        self.root.bind("<MouseWheel>", self._on_mouse_wheel)
+        self.root.bind("<Button-4>", self._on_mouse_wheel)
+        self.root.bind("<Button-5>", self._on_mouse_wheel)
         self.frame.bind("<Configure>", self._refresh_table_columns)
 
         self._setup_drag_and_drop()
 
-        # --- FRAME DOS BOTÕES ---
-        # Organização principal do esquema de botões do app.
-        # Este bloco reúne as ações principais para limpeza, filtro,
-        # salvamento e controle de estado da tabela.
-        self.button_frame = ctk.CTkFrame(self.root, fg_color="transparent")
-        self.button_frame.pack(pady=10, padx=20, fill=tk.X)
-
         # --- BOTÕES MODERNOS ---
         # Cada botão representa uma funcionalidade específica do fluxo de
         # tratamento de dados. A ideia é deixar a navegação clara e intuitiva.
-        button_font = ctk.CTkFont(size=12, weight="bold")
-        button_width = 170
-        button_height = 42
+        button_font = ctk.CTkFont(size=11, weight="bold")
+        button_width = 110
+        button_height = 30
         common_button_opts = {
             "corner_radius": 0,
             "height": button_height,
@@ -271,8 +268,8 @@ class DataCleanerApp:
         destructive_hover = "#D92D20"
 
         def build_button(row, col, text, command, width, fg_color, hover_color, text_color, border_color):
-            wrapper = ctk.CTkFrame(self.button_frame, fg_color="transparent", width=width + 12, height=button_height + 12)
-            wrapper.grid(row=row, column=col, padx=8, pady=10)
+            wrapper = ctk.CTkFrame(self.button_frame, fg_color="transparent", width=width + 10, height=button_height + 8)
+            wrapper.grid(row=row, column=col, padx=3, pady=6, sticky="nsew")
             wrapper.grid_propagate(False)
 
             button = ctk.CTkButton(
@@ -285,32 +282,32 @@ class DataCleanerApp:
                 hover_color=hover_color,
                 text_color=text_color,
                 border_color=border_color,
-                border_width=0,
-                corner_radius=0,
+                border_width=1,
+                corner_radius=8,
                 font=button_font,
             )
-            button.place(x=0, y=0)
+            button.place(x=0, y=0, relwidth=1, relheight=1)
             button.configure(cursor="hand2")
             self._bind_hover_lift(wrapper, button)
             return button
 
-        # LINHA 0 (4 botões)
+        # Linha única para manter a barra enxuta e mais parecida com ferramentas de edição.
         self.load_button = build_button(0, 0, "Carregar Arquivo", self.load_file, button_width, secondary_fg, secondary_hover, secondary_text, secondary_border)
         self.remove_duplicates_button = build_button(0, 1, "Remover Duplicatas", self.remove_duplicates, button_width, secondary_fg, secondary_hover, secondary_text, secondary_border)
         self.fill_na_button = build_button(0, 2, "Preencher Nulos", self.fill_na, button_width, secondary_fg, secondary_hover, secondary_text, secondary_border)
         self.standardize_button = build_button(0, 3, "Padronizar Dados", self.standardize_data, button_width, secondary_fg, secondary_hover, secondary_text, secondary_border)
-
-        # LINHA 1 (5 botões)
-        self.filter_column_button = build_button(1, 0, "Filtrar Coluna", self.filter_column, button_width, secondary_fg, secondary_hover, secondary_text, secondary_border)
-        self.filter_row_button = build_button(1, 1, "Filtrar Linha", self.filter_row, button_width, secondary_fg, secondary_hover, secondary_text, secondary_border)
-        self.undo_button = build_button(1, 2, "Desfazer", self.undo_action, button_width, secondary_fg, secondary_hover, secondary_text, secondary_border)
-        self.save_button = build_button(1, 3, "Salvar", self.save_file, button_width, primary_fg, primary_hover, primary_text, primary_fg)
-        self.delete_column_button = build_button(1, 4, "Excluir Coluna", self.delete_column, button_width, destructive_fg, destructive_hover, "#FFFFFF", destructive_fg)
+        self.rename_column_button = build_button(0, 4, "Renomear Coluna", self.rename_column, button_width, secondary_fg, secondary_hover, secondary_text, secondary_border)
+        self.filter_column_button = build_button(0, 5, "Filtrar Coluna", self.filter_column, button_width, secondary_fg, secondary_hover, secondary_text, secondary_border)
+        self.filter_row_button = build_button(0, 6, "Filtrar Linha", self.filter_row, button_width, secondary_fg, secondary_hover, secondary_text, secondary_border)
+        self.undo_button = build_button(0, 7, "Desfazer", self.undo_action, button_width, secondary_fg, secondary_hover, secondary_text, secondary_border)
+        self.save_button = build_button(0, 8, "Salvar", self.save_file, button_width, primary_fg, primary_hover, primary_text, primary_fg)
+        self.delete_column_button = build_button(0, 9, "Excluir Coluna", self.delete_column, button_width, destructive_fg, destructive_hover, "#FFFFFF", destructive_fg)
 
         # Ajuste de expansão
         self.frame.grid_columnconfigure(0, weight=1)
         self.frame.grid_rowconfigure(0, weight=1)
-        self.button_frame.grid_columnconfigure((0, 1, 2, 3, 4), weight=1)
+        for i in range(0, 10):
+            self.button_frame.grid_columnconfigure(i, weight=1)
 
         self._apply_ui_texts()
         self._apply_font_scale()
@@ -320,34 +317,33 @@ class DataCleanerApp:
     def _bind_hover_lift(self, wrapper, button):
         hover_anim_id = None
 
-        def animate_to(target_y, current_y=0):
+        def animate_to(target_y, current_y=0.0):
             nonlocal hover_anim_id
-            if target_y == current_y:
-                hover_anim_id = None
-                return
 
             delta = target_y - current_y
-            step = max(1, abs(delta) // 2)
-            next_y = current_y + (step if delta > 0 else -step)
-            if abs(target_y - next_y) <= 1:
+            next_y = current_y + (delta * 0.25)
+
+            if abs(target_y - next_y) < 0.1:
                 next_y = target_y
 
             button.place_configure(y=next_y)
-            hover_anim_id = button.after(10, animate_to, target_y, next_y)
+
+            if next_y != target_y:
+                hover_anim_id = button.after(12, animate_to, target_y, next_y)
+            else:
+                hover_anim_id = None
 
         def on_enter(event):
             nonlocal hover_anim_id
             if hover_anim_id is not None:
                 button.after_cancel(hover_anim_id)
-                hover_anim_id = None
-            animate_to(-4)
+            animate_to(-2.0, float(button.place_info().get('y', 0)))
 
         def on_leave(event):
             nonlocal hover_anim_id
             if hover_anim_id is not None:
                 button.after_cancel(hover_anim_id)
-                hover_anim_id = None
-            animate_to(0)
+            animate_to(0.0, float(button.place_info().get('y', 0)))
 
         button.bind("<Enter>", on_enter)
         button.bind("<Leave>", on_leave)
@@ -372,6 +368,7 @@ class DataCleanerApp:
                 "undo": "Desfazer",
                 "save": "Salvar",
                 "delete_column": "Excluir Coluna",
+                "rename_column": "Renomear Coluna",
                 "cancel": "Cancelar",
                 "apply": "Aplicar",
                 "visualize": "Visualizar",
@@ -395,6 +392,7 @@ class DataCleanerApp:
                 "undo": "Undo",
                 "save": "Save",
                 "delete_column": "Delete Column",
+                "rename_column": "Rename Column",
                 "cancel": "Cancel",
                 "apply": "Apply",
                 "visualize": "View",
@@ -440,6 +438,8 @@ class DataCleanerApp:
             self.save_button.configure(text=self._translate("save"))
         if hasattr(self, "delete_column_button"):
             self.delete_column_button.configure(text=self._translate("delete_column"))
+        if hasattr(self, "rename_column_button"):
+            self.rename_column_button.configure(text=self._translate("rename_column"))
 
         if hasattr(self, "language_var"):
             self.language_var.set("Português" if self.language == "pt" else "English")
@@ -462,24 +462,24 @@ class DataCleanerApp:
         if hasattr(self, "language_selector"):
             self.language_selector.configure(font=ctk.CTkFont(size=int(round(self._font_size(11)))))
 
-        if hasattr(self, "load_button"):
-            self.load_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
-        if hasattr(self, "remove_duplicates_button"):
-            self.remove_duplicates_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
-        if hasattr(self, "fill_na_button"):
-            self.fill_na_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
-        if hasattr(self, "standardize_button"):
-            self.standardize_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
-        if hasattr(self, "filter_column_button"):
-            self.filter_column_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
-        if hasattr(self, "filter_row_button"):
-            self.filter_row_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
-        if hasattr(self, "undo_button"):
-            self.undo_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
-        if hasattr(self, "save_button"):
-            self.save_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
-        if hasattr(self, "delete_column_button"):
-            self.delete_column_button.configure(font=ctk.CTkFont(size=int(round(self._font_size(12))), weight="bold"))
+        button_font_size = max(10, int(round(self._font_size(11))))
+        button_height = max(26, int(round(30 * self.font_scale)))
+        button_width = max(92, int(round(110 * self.font_scale)))
+
+        for button_name in [
+            "load_button", "remove_duplicates_button", "fill_na_button", "standardize_button",
+            "filter_column_button", "filter_row_button", "undo_button", "save_button", "delete_column_button"
+        ]:
+            if hasattr(self, button_name):
+                button = getattr(self, button_name)
+                button.configure(
+                    font=ctk.CTkFont(size=button_font_size, weight="bold"),
+                    width=button_width,
+                    height=button_height,
+                )
+
+        if hasattr(self, "tree"):
+            self._refresh_table_columns()
 
     def change_language(self, value):
         if value == "English":
@@ -564,6 +564,13 @@ class DataCleanerApp:
         if hasattr(self, "theme_switch"):
             self.theme_switch.configure(text="Modo escuro" if self.is_dark_mode else "Modo claro")
             self.theme_switch.configure(fg_color=colors["surface"], border_color=colors["accent"])
+        if hasattr(self, "rename_column_button"):
+            self.rename_column_button.configure(
+                fg_color=colors["surface"],
+                hover_color=colors["surface_alt"],
+                text_color=colors["accent"],
+                border_color=colors["border"],
+            )
 
         if hasattr(self, "frame"):
             self.frame.configure(
@@ -625,15 +632,14 @@ class DataCleanerApp:
 
         self._apply_drop_zone_visual()
         if hasattr(self, "tree"):
-            divider_border = 1 if self.table_divider_enabled else 0
             self.style.configure("Treeview",
                                 background=colors["table_bg"],
                                 foreground=colors["text"],
                                 rowheight=30,
                                 fieldbackground=colors["table_bg"],
                                 bordercolor=colors["border"],
-                                borderwidth=divider_border,
-                                relief="solid" if self.table_divider_enabled else "flat")
+                                borderwidth=0,
+                                relief="flat")
             self.style.map("Treeview", background=[("selected", colors["selected"])])
             self.style.configure("Treeview.Heading",
                                 background=colors["heading"],
@@ -641,23 +647,37 @@ class DataCleanerApp:
                                 font=("Arial", 10, "bold"),
                                 relief="flat",
                                 padding=5,
-                                borderwidth=divider_border)
+                                borderwidth=0)
             self.style.map("Treeview.Heading", background=[("active", colors["heading_active"])])
 
-        if hasattr(self, "divider_switch"):
-            if self.table_divider_enabled:
-                self.divider_switch.select()
-            else:
-                self.divider_switch.deselect()
+    def _on_mouse_wheel(self, event):
+        """Mantém o scroll do mouse em movimento vertical na tabela."""
+        if hasattr(event, "delta") and event.delta:
+            steps = int(-event.delta / 120)
+            if steps:
+                self.tree.yview_scroll(steps, "units")
+                return "break"
+
+        if getattr(event, "num", None) == 4:
+            self.tree.yview_scroll(-1, "units")
+            return "break"
+
+        if getattr(event, "num", None) == 5:
+            self.tree.yview_scroll(1, "units")
+            return "break"
+
+        return "break"
 
     def _start_horizontal_drag(self, event):
-        # Navegação horizontal da tabela em desktop, simulando gesto de swipe.
-        # Isso melhora a experiência quando a tabela tem muitas colunas.
+        # Navegação horizontal e vertical da tabela em desktop, simulando swipe.
+        # Isso melhora a experiência quando a tabela tem muitas colunas e linhas.
         self._horizontal_drag_active = True
         self._horizontal_drag_start_x = event.x
         self._horizontal_drag_start_scroll = float(self.tree.xview()[0])
         self._horizontal_drag_last_x = event.x
+        self._horizontal_drag_last_y = event.y
         self._horizontal_drag_velocity = 0.0
+        self._vertical_drag_velocity = 0.0
         if self._horizontal_drag_inertia_id is not None:
             self.root.after_cancel(self._horizontal_drag_inertia_id)
             self._horizontal_drag_inertia_id = None
@@ -667,36 +687,58 @@ class DataCleanerApp:
             return
 
         delta_x = event.x - self._horizontal_drag_last_x
+        delta_y = event.y - self._horizontal_drag_last_y
         self._horizontal_drag_last_x = event.x
+        self._horizontal_drag_last_y = event.y
 
-        # Move com sensibilidade reduzida para parecer mais natural
-        current_scroll = float(self.tree.xview()[0])
-        target_scroll = current_scroll - (delta_x / max(self.tree.winfo_width(), 1)) * 1.0
-        target_scroll = max(0.0, min(target_scroll, 1.0))
-        self.tree.xview_moveto(target_scroll)
+        current_scroll_x = float(self.tree.xview()[0])
+        current_scroll_y = float(self.tree.yview()[0])
 
-        # Inércia baseada no último deslocamento do drag
-        self._horizontal_drag_velocity = (target_scroll - current_scroll) * 0.5
+        # Mantém a mesma lógica da navegação horizontal, mas deixa o eixo
+        # vertical mais suave para movimento de cima/baixo.
+        target_scroll_x = current_scroll_x - (delta_x / max(self.tree.winfo_width(), 1)) * self._drag_sensitivity
+        target_scroll_y = current_scroll_y - (delta_y / max(self.tree.winfo_height(), 1)) * self._drag_vertical_sensitivity
+
+        target_scroll_x = max(0.0, min(target_scroll_x, 1.0))
+        target_scroll_y = max(0.0, min(target_scroll_y, 1.0))
+
+        self.tree.xview_moveto(target_scroll_x)
+        self.tree.yview_moveto(target_scroll_y)
+
+        self._horizontal_drag_velocity = (target_scroll_x - current_scroll_x) * 0.5
+        self._vertical_drag_velocity = (target_scroll_y - current_scroll_y) * 0.5
 
     def _stop_horizontal_drag(self, event):
         self._horizontal_drag_active = False
         self._horizontal_drag_velocity *= 0.50
-        if abs(self._horizontal_drag_velocity) < 0.0005:
+        self._vertical_drag_velocity *= 0.50
+        if abs(self._horizontal_drag_velocity) < 0.0005 and abs(self._vertical_drag_velocity) < 0.0005:
             self._horizontal_drag_velocity = 0.0
+            self._vertical_drag_velocity = 0.0
             return
         self._animate_horizontal_friction()
 
     def _animate_horizontal_friction(self):
-        if abs(self._horizontal_drag_velocity) < 0.0005:
-            self._horizontal_drag_velocity = 0.9
+        if abs(self._horizontal_drag_velocity) < 0.0005 and abs(self._vertical_drag_velocity) < 0.0005:
+            self._horizontal_drag_velocity = 0.0
+            self._vertical_drag_velocity = 0.0
             self._horizontal_drag_inertia_id = None
             return
 
-        current = float(self.tree.xview()[0])
-        next_scroll = current + self._horizontal_drag_velocity
-        next_scroll = max(0.0, min(next_scroll, 1.0))
-        self.tree.xview_moveto(next_scroll)
-        self._horizontal_drag_velocity *= 0.98
+        current_x = float(self.tree.xview()[0])
+        current_y = float(self.tree.yview()[0])
+
+        next_scroll_x = current_x + self._horizontal_drag_velocity
+        next_scroll_y = current_y + self._vertical_drag_velocity
+
+        next_scroll_x = max(0.0, min(next_scroll_x, 1.0))
+        next_scroll_y = max(0.0, min(next_scroll_y, 1.0))
+
+        self.tree.xview_moveto(next_scroll_x)
+        self.tree.yview_moveto(next_scroll_y)
+
+        self._horizontal_drag_velocity *= self._drag_friction
+        self._vertical_drag_velocity *= self._drag_friction
         self._horizontal_drag_inertia_id = self.root.after(7, self._animate_horizontal_friction)
 
     def _should_center_numeric_column(self, column_name):
@@ -733,6 +775,7 @@ class DataCleanerApp:
             tree_y = self.tree.winfo_y()
             tree_width = self.tree.winfo_width()
             tree_height = self.tree.winfo_height()
+            self.root.update_idletasks()
         except Exception:
             return
 
@@ -743,19 +786,22 @@ class DataCleanerApp:
         if not columns:
             return
 
-        total_width = 0
-        for column in columns:
-            total_width += max(self.tree.column(column, "width"), 80)
-
+        column_widths = [max(self.tree.column(column, "width"), 80) for column in columns]
+        total_width = sum(column_widths)
         if total_width <= 0:
             return
 
-        x_cursor = tree_x + 4
-        for index, column in enumerate(columns[:-1]):
-            width = max(self.tree.column(column, "width"), 80)
-            x_cursor += width
-            divider = ctk.CTkFrame(self.frame, width=1, height=max(tree_height - 10, 20), fg_color="#d9dfe9", corner_radius=0)
-            divider.place(x=x_cursor - 1, y=tree_y + 4)
+        scroll_fraction = float(self.tree.xview()[0]) if hasattr(self.tree, "xview") else 0.0
+        visible_width = max(tree_width - 20, 0)
+        scroll_offset = scroll_fraction * max(total_width - visible_width, 0)
+        divider_color = "#7A7A7A" if self.is_dark_mode else "#9A9A9A"
+
+        x_cursor = 9
+        for column_index, column_width in enumerate(column_widths[:-1]):
+            x_cursor += column_width
+            divider_x = tree_x + x_cursor - scroll_offset
+            divider = tk.Frame(self.frame, width=2, height=max(tree_height - 10, 20), bg=divider_color, bd=0, highlightthickness=0)
+            divider.place(x=divider_x, y=tree_y + 4)
             self._table_divider_lines.append(divider)
 
     def _refresh_table_columns(self, event=None):
@@ -778,17 +824,7 @@ class DataCleanerApp:
         self._refresh_table_dividers()
 
     def toggle_table_dividers(self, force_state=None):
-        if force_state is None:
-            self.table_divider_enabled = not self.table_divider_enabled
-        else:
-            self.table_divider_enabled = bool(force_state)
-
-        if hasattr(self, "divider_switch"):
-            if self.table_divider_enabled:
-                self.divider_switch.select()
-            else:
-                self.divider_switch.deselect()
-
+        self.table_divider_enabled = False
         if hasattr(self, "tree"):
             self._refresh_table_dividers()
         self._apply_theme_colors()
@@ -1378,7 +1414,76 @@ class DataCleanerApp:
             else:
                 messagebox.showwarning("Aviso", "Coluna inválida ou não encontrada.")
         else:
-            messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")        
+            messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
+
+    def rename_column(self):
+        if self.data is None:
+            messagebox.showwarning("Aviso", "Carregue um arquivo primeiro.")
+            return
+
+        if self.data.empty or self.data.columns.empty:
+            messagebox.showwarning("Aviso", "Não há colunas disponíveis para renomear.")
+            return
+
+        modal = ctk.CTkToplevel(self.root)
+        modal.title("Renomear Coluna")
+        modal.geometry("440x270")
+        modal.transient(self.root)
+        modal.grab_set()
+        modal.configure(fg_color="#f3f7ff")
+
+        card = ctk.CTkFrame(modal, fg_color="#ffffff", corner_radius=20, border_width=1, border_color="#dfeaff")
+        card.pack(fill=tk.BOTH, expand=True, padx=18, pady=18)
+
+        title = ctk.CTkLabel(card, text="Renomear coluna", font=ctk.CTkFont(size=20, weight="bold"), text_color="#1b263b")
+        title.pack(anchor="w", padx=20, pady=(18, 6))
+
+        subtitle = ctk.CTkLabel(card, text="Escolha a coluna atual e informe o novo nome.", font=ctk.CTkFont(size=12), text_color="#53627a")
+        subtitle.pack(anchor="w", padx=20, pady=(0, 12))
+
+        columns = list(self.data.columns)
+        selected_column = tk.StringVar(value=columns[0])
+        new_name_var = tk.StringVar(value="")
+
+        column_selector = ctk.CTkOptionMenu(card, values=columns, variable=selected_column, width=260, fg_color="#edf4ff", button_color="#8ab6ff", button_hover_color="#72a5ff")
+        column_selector.pack(padx=20, pady=(0, 12), fill=tk.X)
+
+        new_name_entry = ctk.CTkEntry(card, textvariable=new_name_var, width=260, placeholder_text="Novo nome da coluna")
+        new_name_entry.pack(padx=20, pady=(0, 16), fill=tk.X)
+
+        def apply_rename():
+            old_name = selected_column.get()
+            new_name = str(new_name_var.get()).strip()
+
+            if not new_name:
+                messagebox.showwarning("Atenção", "Digite um nome válido para a coluna.")
+                return
+
+            if new_name == old_name:
+                messagebox.showinfo("Informação", "O novo nome é igual ao nome atual.")
+                modal.destroy()
+                return
+
+            if new_name in self.data.columns and new_name != old_name:
+                messagebox.showwarning("Atenção", f"O nome '{new_name}' já existe na tabela.")
+                return
+
+            if hasattr(self, 'data_history'):
+                self.data_history.append(self.data.copy())
+
+            self.data = self.data.rename(columns={old_name: new_name})
+            self.show_data()
+            messagebox.showinfo("Sucesso", f"Coluna '{old_name}' renomeada para '{new_name}'.")
+            modal.destroy()
+
+        action_bar = ctk.CTkFrame(card, fg_color="transparent")
+        action_bar.pack(fill=tk.X, padx=20, pady=(0, 18))
+
+        cancel = ctk.CTkButton(action_bar, text="Cancelar", width=110, fg_color="#e6ecff", hover_color="#dfeaff", text_color="#1b263b", command=modal.destroy)
+        cancel.pack(side=tk.LEFT)
+
+        apply_btn = ctk.CTkButton(action_bar, text="Salvar", width=110, fg_color="#7bd6a1", hover_color="#63c78f", text_color="#103022", command=apply_rename)
+        apply_btn.pack(side=tk.RIGHT)
 
     # Janela de retorno visual para mensagens rápidas.
     # Usada para confirmar ações e avisar sobre estados importantes da base.

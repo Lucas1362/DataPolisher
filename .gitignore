@@ -1,4 +1,6 @@
 # Ignora arquivos de compilação do Python
+build/
+dist/
 __pycache__/
 *.pyc
 
