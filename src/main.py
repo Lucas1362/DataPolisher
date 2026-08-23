@@ -17,7 +17,9 @@ if __name__ == "__main__":
     # Cria a janela principal do app com suporte ao drag-and-drop.
     root = TkinterDnD.Tk()
     root.geometry("1920x1080")  # Define o tamanho inicial da janela
-    root.attributes("-alpha", 0.90)  # Efeito de vidro sutil na janela
+    # Verifica o sistema operacional. Se NÃO for Windows, aplica o vidro.
+    if sys.platform != "win32":
+        root.attributes("-alpha", 0.85)  # Efeito de vidro sutil na janela
 
     # Instancia a interface principal, que concentra as funcionalidades.
     app = DataCleanerApp(root)
