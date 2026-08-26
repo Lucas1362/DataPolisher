@@ -1,4 +1,5 @@
 pandas
+flet
 customtkinter
 openpyxl
 odfpy

@@ -1,7 +1,7 @@
  DataPolisher 
 
 ![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)
-![CustomTkinter](https://img.shields.io/badge/GUI-CustomTkinter-darkblue.svg)
+![Flet](https://img.shields.io/badge/GUI-Flet-darkblue.svg)
 ![Pandas](https://img.shields.io/badge/Data-Pandas-150458.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -25,7 +25,7 @@ Focado na experiência do usuário (UX), ele permite que cientistas de dados, an
 * **Controle de Estado:** Sistema de histórico na memória (Undo) que permite desfazer ações destrutivas acidentais.
 
 ### Interface e Experiência (UI/UX)
-* **Design Responsivo e Moderno:** Construído sob o `CustomTkinter`, apresentando janelas modais, botões com feedback tátil e cantos arredondados.
+* **Design Responsivo e Moderno:** Construído sob o `Flet`, com controles nativos, feedback de interação e layout adaptável.
 * **Navegação Avançada:** Tabela de dados (Treeview) estilizada com suporte a *Swipe/Arraste Horizontal* nativo no desktop.
 * **Personalização Completa:** 
   * Menu flutuante animado.
@@ -39,7 +39,7 @@ Focado na experiência do usuário (UX), ele permite que cientistas de dados, an
 
 O projeto foi construído seguindo boas práticas de engenharia de software (Clean Code e Separação de Preocupações):
 * **Backend (Regras de Negócio):** `Python` e `Pandas` (isolados no módulo `cleaner.py`).
-* **Frontend (Visual):** `CustomTkinter` e `Tkinter` (isolados no módulo `interface.py`).
+* **Frontend (Visual):** `Flet` (isolado no módulo `interface.py`).
 
 ### Estrutura do Projeto
 ```text
