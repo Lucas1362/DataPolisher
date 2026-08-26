@@ -34,9 +34,12 @@ def open_standardize_modal(app):
         app.page.update()
 
     dialog = ft.AlertDialog(
-        title=ft.Text("Padronizar Dados", weight="bold"),
+        title=ft.Text("Padronizar Dados", weight=ft.FontWeight.BOLD),
         content=ft.Column([ft.Text("Escolha a coluna e o estilo de texto desejado:"), col_dropdown, case_dropdown], tight=True),
-        actions=[ft.TextButton("Cancelar", on_click=close_dialog), ft.ElevatedButton("Aplicar", on_click=apply, bgcolor=ft.colors.GREEN_600, color=ft.colors.WHITE)],
+        actions=[
+            ft.TextButton("Cancelar", on_click=close_dialog),
+            ft.ElevatedButton("Aplicar", on_click=apply, bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE)
+        ],
     )
     app.page.dialog = dialog
     dialog.open = True
@@ -70,9 +73,12 @@ def open_rename_modal(app):
         app.page.update()
 
     dialog = ft.AlertDialog(
-        title=ft.Text("Renomear Coluna", weight="bold"),
+        title=ft.Text("Renomear Coluna", weight=ft.FontWeight.BOLD),
         content=ft.Column([col_dropdown, new_name_field], tight=True),
-        actions=[ft.TextButton("Cancelar", on_click=close_dialog), ft.ElevatedButton("Salvar", on_click=apply)],
+        actions=[
+            ft.TextButton("Cancelar", on_click=close_dialog),
+            ft.ElevatedButton("Salvar", on_click=apply, bgcolor=ft.Colors.BLUE_900, color=ft.Colors.WHITE)
+        ],
     )
     app.page.dialog = dialog
     dialog.open = True
@@ -93,7 +99,6 @@ def open_fill_na_modal(app):
         if not val:
             return
             
-        # Tenta converter para número se possível
         try: val = float(val) if '.' in val else int(val)
         except ValueError: pass
 
@@ -110,9 +115,12 @@ def open_fill_na_modal(app):
         app.page.update()
 
     dialog = ft.AlertDialog(
-        title=ft.Text("Preencher Nulos", weight="bold"),
+        title=ft.Text("Preencher Nulos", weight=ft.FontWeight.BOLD),
         content=ft.Column([col_dropdown, value_field], tight=True),
-        actions=[ft.TextButton("Cancelar", on_click=close_dialog), ft.ElevatedButton("Aplicar", on_click=apply)],
+        actions=[
+            ft.TextButton("Cancelar", on_click=close_dialog),
+            ft.ElevatedButton("Aplicar", on_click=apply, bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE)
+        ],
     )
     app.page.dialog = dialog
     dialog.open = True
