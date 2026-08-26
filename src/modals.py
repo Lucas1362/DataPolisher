@@ -30,8 +30,7 @@ def open_standardize_modal(app):
         close_dialog(e)
 
     def close_dialog(e):
-        dialog.open = False
-        app.page.update()
+        app.app_page.pop_dialog()
 
     dialog = ft.AlertDialog(
         title=ft.Text("Padronizar Dados", weight=ft.FontWeight.BOLD),
@@ -41,9 +40,7 @@ def open_standardize_modal(app):
             ft.ElevatedButton("Aplicar", on_click=apply, bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE)
         ],
     )
-    app.page.dialog = dialog
-    dialog.open = True
-    app.page.update()
+    app.app_page.show_dialog(dialog)
 
 def open_rename_modal(app):
     if app.data is None:
@@ -69,8 +66,7 @@ def open_rename_modal(app):
         close_dialog(e)
 
     def close_dialog(e):
-        dialog.open = False
-        app.page.update()
+        app.app_page.pop_dialog()
 
     dialog = ft.AlertDialog(
         title=ft.Text("Renomear Coluna", weight=ft.FontWeight.BOLD),
@@ -80,9 +76,7 @@ def open_rename_modal(app):
             ft.ElevatedButton("Salvar", on_click=apply, bgcolor=ft.Colors.BLUE_900, color=ft.Colors.WHITE)
         ],
     )
-    app.page.dialog = dialog
-    dialog.open = True
-    app.page.update()
+    app.app_page.show_dialog(dialog)
 
 def open_fill_na_modal(app):
     if app.data is None:
@@ -111,8 +105,7 @@ def open_fill_na_modal(app):
         close_dialog(e)
 
     def close_dialog(e):
-        dialog.open = False
-        app.page.update()
+        app.app_page.pop_dialog()
 
     dialog = ft.AlertDialog(
         title=ft.Text("Preencher Nulos", weight=ft.FontWeight.BOLD),
@@ -122,6 +115,4 @@ def open_fill_na_modal(app):
             ft.ElevatedButton("Aplicar", on_click=apply, bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE)
         ],
     )
-    app.page.dialog = dialog
-    dialog.open = True
-    app.page.update()
+    app.app_page.show_dialog(dialog)

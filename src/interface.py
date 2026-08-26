@@ -7,81 +7,92 @@ import modals
 
 class DataCleanerApp(ft.Column):
     def __init__(self, page: ft.Page):
-        super().__init__(expand=True, spacing=15)
-        self._page = page
+        super().__init__(expand=True, spacing=0)
+        self.app_page = page  # Alterado de self.page para self.app_page
         self.data = None
         self.data_history = []
 
-        # Tabela inicia com a mensagem de aguardando
         self.data_table = ft.DataTable(
             columns=[ft.DataColumn(ft.Text("Nenhum arquivo carregado"))],
-            rows=[],
-            expand=True,
+            rows=[]
         )
-        self.controls = [self._build_header(), self._build_toolbar(), self._build_table()]
+
+        # Estrutura limpa dividida em blocos independentes
+        self.controls = [
+            self._build_header(),
+            ft.Divider(height=15, color="transparent"),
+            self._build_toolbar(),
+            ft.Divider(height=15, color="transparent"),
+            self._build_table() # A tabela fica isolada no seu próprio retângulo
+        ]
 
     def _build_header(self):
-        return ft.Row(
-            controls=[
-                ft.Text("DataPolisher Studio", size=28, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
-                ft.Text("Higienização inteligente de dados", size=14, italic=True, color=ft.Colors.GREY_600),
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+        return ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Text("DataPolisher Studio", size=26, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
+                    ft.Text("Higienização inteligente de dados", size=13, italic=True, color=ft.Colors.GREY_600),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+            ),
+            padding=10 # Valor numérico direto, compatível com qualquer versão do Flet
         )
 
     def _build_toolbar(self):
         linha_1 = ft.Row(
             controls=[
-                ft.ElevatedButton("Carregar Arquivo", icon="file_upload", on_click=self.pick_file),
-                ft.ElevatedButton("Remover Duplicatas", icon="delete", on_click=self.remove_duplicates),
-                ft.ElevatedButton("Preencher Nulos", icon="edit", on_click=lambda e: modals.open_fill_na_modal(self)),
-                ft.ElevatedButton("Padronizar", icon="text_format", on_click=lambda e: modals.open_standardize_modal(self)),
+                ft.ElevatedButton("Carregar Arquivo", icon=ft.Icons.FILE_UPLOAD, on_click=self.pick_file),
+                ft.ElevatedButton("Remover Duplicatas", icon=ft.Icons.DELETE, on_click=self.remove_duplicates),
+                ft.ElevatedButton("Preencher Nulos", icon=ft.Icons.EDIT, on_click=lambda e: modals.open_fill_na_modal(self)),
+                ft.ElevatedButton("Padronizar", icon=ft.Icons.TEXT_FORMAT, on_click=lambda e: modals.open_standardize_modal(self)),
             ],
             spacing=10
         )
         linha_2 = ft.Row(
             controls=[
-                ft.ElevatedButton("Renomear Coluna", icon="edit_attributes", on_click=lambda e: modals.open_rename_modal(self)),
-                ft.ElevatedButton("Desfazer", icon="undo", on_click=self.undo_action),
-                ft.ElevatedButton("Salvar", icon="save", bgcolor=ft.Colors.BLUE_900, color=ft.Colors.WHITE, on_click=self.save_file),
+                ft.ElevatedButton("Renomear Coluna", icon=ft.Icons.EDIT_ATTRIBUTES, on_click=lambda e: modals.open_rename_modal(self)),
+                ft.ElevatedButton("Desfazer", icon=ft.Icons.UNDO, on_click=self.undo_action),
+                ft.ElevatedButton("Salvar", icon=ft.Icons.SAVE, bgcolor=ft.Colors.BLUE_900, color=ft.Colors.WHITE, on_click=self.save_file),
             ],
             spacing=10
         )
-        return ft.Column([linha_1, linha_2], spacing=10)
-
-    def _build_table(self):
         return ft.Container(
-            # O segredo do scroll duplo no Flet:
-            # Uma Row (scroll horizontal) dentro de uma Column (scroll vertical)
-            content=ft.Column(
-                controls=[
-                    ft.Row(
-                        controls=[self.data_table], 
-                        scroll=ft.ScrollMode.ALWAYS,
-                        expand=True
-                    )
-                ], 
-                scroll=ft.ScrollMode.ALWAYS,
-                expand=True
-            ),
-            bgcolor=ft.Colors.WHITE,
-            border_radius=15,
-            padding=10,
-            expand=True,
-            shadow=ft.BoxShadow(blur_radius=30, color=ft.Colors.BLACK12)
+            content=ft.Column([linha_1, linha_2], spacing=8),
+            padding=10 # Valor numérico direto
         )
 
-    # --- COMUNICAÇÃO NATIVA COM O WINDOWS (Substitui o Flet FilePicker) ---
+    def _build_table(self):
+        # Isola o scroll duplo estritamente dentro do retângulo da tabela
+        tabela_com_scroll = ft.Row(
+            controls=[
+                ft.Column(
+                    controls=[self.data_table],
+                    scroll=ft.ScrollMode.ALWAYS,
+                )
+            ],
+            scroll=ft.ScrollMode.ALWAYS,
+            expand=True
+        )
+
+        return ft.Container(
+            content=tabela_com_scroll,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=15,
+            padding=15,
+            expand=True, # O retângulo expande apenas aqui, sem afetar o topo
+            shadow=ft.BoxShadow(blur_radius=10, color=ft.Colors.BLACK12)
+        )
+
     def pick_file(self, _):
         root = tk.Tk()
-        root.withdraw() # Esconde a janelinha base do Tkinter
-        root.attributes('-topmost', True) # Força a janela a abrir na frente do app
+        root.withdraw()
+        root.attributes('-topmost', True)
         
         file_path = filedialog.askopenfilename(
             title="Selecione o arquivo de dados",
             filetypes=[("Planilhas e Dados", "*.csv *.xlsx *.xls *.ods *.json")]
         )
-        root.destroy() # Encerra o processo do Tkinter imediatamente
+        root.destroy()
         
         if file_path:
             self.load_file_path(file_path)
@@ -113,7 +124,6 @@ class DataCleanerApp(ft.Column):
             except Exception as exc:
                 self.show_snack_bar(f"Erro ao salvar arquivo: {exc}")
 
-    # --- LÓGICA CONECTADA AO SEU CLEANER.PY ---
     def load_file_path(self, file_path):
         try:
             extension = file_path.lower().rsplit(".", 1)[-1]
@@ -146,7 +156,7 @@ class DataCleanerApp(ft.Column):
                 ft.DataRow(cells=[ft.DataCell(ft.Text(str(val))) for val in row])
                 for row in preview_data.values
             ]
-            self._page.update()
+            self.app_page.update()
 
     def remove_duplicates(self, e):
         if self.data is not None:
@@ -164,6 +174,7 @@ class DataCleanerApp(ft.Column):
             self.show_snack_bar("Última ação desfeita.")
 
     def show_snack_bar(self, text):
-        self._page.snack_bar = ft.SnackBar(ft.Text(text))
-        self._page.snack_bar.open = True
-        self._page.update()
+        snack_bar = ft.SnackBar(ft.Text(text))
+        self.app_page.overlay.append(snack_bar)
+        snack_bar.open = True
+        self.app_page.update()

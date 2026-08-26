@@ -6,7 +6,7 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.LIGHT
     page.window.width = 1280
     page.window.height = 720
-    page.padding = 20
+    page.padding = 5
     page.bgcolor = ft.Colors.BLUE_GREY_50
 
     # Instancia a interface e joga na tela (sem tentar puxar pickers antigos)
