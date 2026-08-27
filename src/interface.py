@@ -39,26 +39,35 @@ class DataCleanerApp(ft.Column):
         )
 
     def _build_toolbar(self):
-        linha_1 = ft.Row(
-            controls=[
-                ft.ElevatedButton("Carregar Arquivo", icon=ft.Icons.FILE_UPLOAD, on_click=self.pick_file),
-                ft.ElevatedButton("Remover Duplicatas", icon=ft.Icons.DELETE, on_click=self.remove_duplicates),
-                ft.ElevatedButton("Preencher Nulos", icon=ft.Icons.EDIT, on_click=lambda e: modals.open_fill_na_modal(self)),
-                ft.ElevatedButton("Padronizar", icon=ft.Icons.TEXT_FORMAT, on_click=lambda e: modals.open_standardize_modal(self)),
-            ],
-            spacing=10
+        estilo_botao = ft.ButtonStyle(
+            shape=ft.RoundedRectangleBorder(radius=3),
+            elevation={
+                "pressed": 2,
+                "": 5,
+                "hover": 8,
+                
+            },
+            padding=12
         )
-        linha_2 = ft.Row(
-            controls=[
-                ft.ElevatedButton("Renomear Coluna", icon=ft.Icons.EDIT_ATTRIBUTES, on_click=lambda e: modals.open_rename_modal(self)),
-                ft.ElevatedButton("Desfazer", icon=ft.Icons.UNDO, on_click=self.undo_action),
-                ft.ElevatedButton("Salvar", icon=ft.Icons.SAVE, bgcolor=ft.Colors.BLUE_900, color=ft.Colors.WHITE, on_click=self.save_file),
-            ],
-            spacing=10
-        )
+
+        # Todos os botões concentrados em uma única linha (Row) com espaçamento limpo
         return ft.Container(
-            content=ft.Column([linha_1, linha_2], spacing=8),
-            padding=10 # Valor numérico direto
+            content=ft.Row(
+                controls=[
+                    ft.ElevatedButton("Carregar Arquivo", icon=ft.Icons.FILE_UPLOAD, on_click=self.pick_file, style=estilo_botao),
+                    ft.ElevatedButton("Remover Duplicatas", icon=ft.Icons.DELETE, on_click=self.remove_duplicates, style=estilo_botao),
+                    ft.ElevatedButton("Preencher Nulos", icon=ft.Icons.EDIT, on_click=lambda e: modals.open_fill_na_modal(self), style=estilo_botao),
+                    ft.ElevatedButton("Padronizar", icon="text_format", on_click=lambda e: modals.open_standardize_modal(self), style=estilo_botao),
+                    ft.ElevatedButton("Renomear Coluna", icon="edit_attributes", on_click=lambda e: modals.open_rename_modal(self), style=estilo_botao),
+                    ft.ElevatedButton("Desfazer", icon="undo", on_click=self.undo_action, style=estilo_botao),
+                    ft.ElevatedButton("Salvar", icon=ft.Icons.SAVE, bgcolor=ft.Colors.BLUE_900, color=ft.Colors.WHITE, on_click=self.save_file, style=estilo_botao),
+                ],
+                spacing=2,
+                alignment=ft.MainAxisAlignment.START,
+                
+                wrap=True # Garante que se faltar espaço, eles quebram para a linha de baixo automaticamente em vez de dar erro
+            ),
+            padding=5
         )
 
     def _build_table(self):
